@@ -1,0 +1,2220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Emerald Miner</title>
+<!-- CrazyGames HTML5 SDK v3. Загружается с официального CDN. -->
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
+    html, body { touch-action: manipulation; }
+    body { margin: 0; background: #1a1a1a; color: #fff; overflow: hidden; height: 100vh; display: flex; }
+
+    /* ===== Кнопка сворачивания меню ===== */
+    #menu-toggle {
+        position: fixed; top: 13px; left: 10px; z-index: 200;
+        width: 38px; height: 38px;
+        background: #3c3c3c; border: 2px solid #55ff55;
+        border-radius: 8px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        padding: 0;
+        font-size: 1.35rem; line-height: 1; color: #55ff55; font-weight: bold;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        transition: transform 0.15s ease;
+    }
+    #menu-toggle:active { transform: scale(0.92); }
+    #menu-toggle .badge {
+        position: absolute; top: -6px; right: -6px;
+        background: #ff3333; color: #fff; font-size: 0.7rem;
+        border-radius: 50%; min-width: 20px; height: 20px;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: bold; padding: 0 4px; display: none;
+    }
+    #menu-toggle .badge.show { display: flex; }
+
+    /* ===== Боковое меню ===== */
+    #left-menu {
+        width: 430px; max-width: 46vw; min-width: 360px;
+        background: #2c2c2c; border-right: 4px solid #4a4a4a;
+        display: flex; flex-direction: column; height: 100%; z-index: 100;
+        overflow: hidden; min-width: 0; flex-shrink: 0;
+        transition: transform 0.3s ease, width 0.3s ease;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+    }
+    #left-menu.collapsed {
+        transform: translateX(-100%);
+        width: 0;
+        border-right: none;
+        box-shadow: none;
+        visibility: hidden;
+    }
+    .menu-header {
+        background: #3c3c3c; min-height: 64px;
+        padding: 12px 56px 12px 60px;
+        display: flex; align-items: center; justify-content: center;
+        text-align: center; font-size: 1.28rem; font-weight: bold;
+        border-bottom: 4px solid #4a4a4a;
+        color: #55ff55; text-shadow: 1px 1px 2px #000;
+        position: relative;
+    }
+    #menu-title {
+        display: block; width: 100%;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .menu-header .close-btn {
+        position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+        width: 38px; height: 38px; background: #4a4a4a;
+        border: none; border-radius: 8px; color: #fff;
+        font-size: 1.4rem; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        padding: 0;
+    }
+    .menu-header .close-btn:active { background: #555; }
+
+    .tabs {
+        display: flex; gap: 8px; padding: 10px 12px 8px;
+        background: #222; overflow-x: auto; overflow-y: hidden; flex-shrink: 0;
+        scrollbar-width: thin; scrollbar-color: #55aa55 #222;
+        scroll-snap-type: x proximity; overscroll-behavior-x: contain;
+    }
+    .tabs::-webkit-scrollbar { height: 6px; }
+    .tabs::-webkit-scrollbar-thumb { background: #55aa55; border-radius: 999px; }
+    .tab {
+        flex: 0 0 auto; white-space: nowrap; min-height: 42px;
+        padding: 9px 12px; text-align: center; cursor: pointer;
+        background: #313131; font-weight: bold; font-size: 0.92rem;
+        border: 2px solid transparent; border-radius: 999px;
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        scroll-snap-align: start;
+    }
+    .tab.active {
+        background: #3c3c3c; border-color: #55ff55; color: #55ff55;
+        box-shadow: inset 0 -2px 0 rgba(85,255,85,0.18), 0 0 0 1px rgba(85,255,85,0.08);
+    }
+    .tab-icon { font-size: 1rem; line-height: 1; }
+    .tab-label { display: inline-block; }
+    .shop-list {
+        flex: 1; overflow-y: auto; overflow-x: hidden; display: none;
+        padding: 10px 12px 14px; scrollbar-gutter: stable;
+    }
+    .shop-list.active { display: block; }
+    .feature-summary {
+        background: #283329; border: 1px solid #3e7345; padding: 10px;
+        border-radius: 10px; margin-bottom: 12px; line-height: 1.45; font-size: .86rem;
+        white-space: pre-line; width: 100%; max-width: 100%; overflow-wrap: anywhere;
+    }
+    .feature-label { color: #80e98a; font-weight: bold; }
+    .feature-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0; }
+    .shop-item .feature-progress { height: 8px; border-radius: 7px; background: #222; overflow: hidden; margin: 6px 0; }
+    .feature-progress > span { display: block; height: 100%; background: #55ff55; }
+    .shop-item .sub-btn { margin-top: 6px; width: 100%; min-height: 42px; background: #3b5775; border: none; color: #fff; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; touch-action: manipulation; }
+    .shop-item .sub-btn:disabled { background: #555; cursor: not-allowed; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 300; display: none; justify-content: center; align-items: center; padding: 16px; }
+    .modal-backdrop.show { display: flex; }
+    .modal-card { background: #303030; border: 2px solid #55ff55; border-radius: 10px; max-width: 380px; width: 100%; padding: 18px; line-height: 1.5; box-shadow: 0 10px 40px #000; }
+    #prestige-modal-body { white-space: pre-line; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .modal-actions button { flex: 1; min-height: 44px; border-radius: 5px; border: 0; background: #4caf50; color: white; font-weight: bold; cursor: pointer; }
+    .modal-actions button.secondary { background: #555; }
+    #toast { position: fixed; z-index: 290; bottom: 86px; left: 50%; transform: translateX(-50%); background: #243b29; border: 1px solid #55ff55; color: #fff; border-radius: 8px; padding: 10px 14px; display: none; text-align: center; max-width: 85vw; pointer-events: none; }
+    @media(min-width: 1400px) { #left-menu { width: 500px; max-width: 38vw; } }
+    @media(max-width:768px) {
+        #left-menu { width: min(100vw, 380px); max-width: 100vw; min-width: 0; }
+        #left-menu.collapsed { width: min(100vw, 380px); }
+        #menu-toggle { top: 12px; left: 10px; }
+        .menu-header { min-height: 60px; font-size: 1.08rem; padding: 10px 50px 10px 58px; }
+        .tabs { padding: 8px 10px 8px; gap: 7px; scroll-snap-type: x mandatory; }
+        .tab { padding: 9px 12px; min-height: 40px; font-size: 0.89rem; }
+        .shop-list { padding: 8px 10px 14px; }
+    }
+
+    /* ===== Магазин ===== */
+    .shop-item {
+        background: #3a3a3a; border: 2px solid #555; padding: 12px;
+        margin-bottom: 10px; border-radius: 12px; display: flex; flex-direction: column;
+        width: 100%; max-width: 100%; overflow: hidden;
+    }
+    .shop-item.locked { opacity: 0.5; filter: grayscale(1); }
+    .shop-item.bought { border-color: #55ff55; }
+    .item-top { display: flex; align-items: center; gap: 12px; width: 100%; }
+    .item-icon {
+        width: 42px; height: 42px; flex: 0 0 42px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center; font-size: 1.35rem;
+        background: linear-gradient(180deg, #454545, #2d2d2d); border: 1px solid #5d5d5d;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .item-main { min-width: 0; flex: 1; overflow: hidden; }
+    .shop-item .title { font-weight: bold; font-size: 0.98rem; color: #fff; line-height: 1.2; overflow-wrap: anywhere; }
+    .shop-item .desc { font-size: 0.82rem; color: #aaa; margin: 4px 0; line-height: 1.35; overflow-wrap: anywhere; }
+    .shop-item .lock-reason { font-size: 0.76rem; color: #ff7777; margin-top: 4px; font-style: italic; line-height: 1.35; overflow-wrap: anywhere; }
+    @media(max-width:480px) {
+        .item-icon { width: 38px; height: 38px; flex-basis: 38px; font-size: 1.15rem; }
+        .tab-label { font-size: 0.88rem; }
+    }
+    .buy-btn {
+        margin-top: 6px; width: 100%; min-height: 44px;
+        background: #4caf50; border: none; color: white; padding: 9px 10px;
+        cursor: pointer; font-weight: bold; border-radius: 6px;
+        pointer-events: auto; touch-action: manipulation;
+        font-size: 0.9rem;
+    }
+    .buy-btn:hover:not(:disabled) { background: #45a049; }
+    .buy-btn:disabled { background: #555; cursor: not-allowed; }
+
+    /* ===== Игровая зона ===== */
+    #game-area { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+
+    #bg-overlay {
+        position: absolute; inset: 0;
+        background-image: url('bg.jpg');
+        background-size: cover; background-position: center;
+        filter: brightness(0.6);
+        z-index: 1; pointer-events: none;
+        transition: background-image 0.4s ease;
+    }
+
+    /* ===== Верхняя инфо-панель ===== */
+    #top-info {
+        position: absolute; top: 20px; text-align: center; z-index: 5;
+        background: rgba(0,0,0,0.75); padding: 12px 20px; border-radius: 10px;
+        border: 2px solid #4a4a4a; width: 80%; max-width: 420px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    #resource-count {
+        font-size: 1.8rem; color: #55ff55; font-weight: bold; text-shadow: 2px 2px #000;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    #resource-count .res-icon {
+        width: 32px; height: 32px;
+        background-image: url('emerald.png');
+        background-size: contain; background-repeat: no-repeat; background-position: center;
+        filter: drop-shadow(0 0 6px rgba(0,255,68,0.6));
+    }
+    #pps-count { font-size: 0.9rem; color: #00aaaa; }
+    #level-info { margin-top: 5px; font-weight: bold; color: #ffaa00; font-size: 0.9rem; }
+
+    /* ===== Шкала опыта ===== */
+    #exp-bar-container {
+        position: relative;
+        width: 100%; background: #333; height: 20px; border-radius: 10px;
+        margin-top: 8px; overflow: hidden; border: 1px solid #555;
+    }
+    #exp-bar {
+        width: 0%; height: 100%;
+        background: linear-gradient(90deg, #2ecc71, #55ff55, #aaffaa);
+        transition: width 0.15s ease;
+        box-shadow: 0 0 8px rgba(85,255,85,0.6);
+    }
+    #exp-text {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.75rem; font-weight: bold; color: #fff;
+        text-shadow: 1px 1px 2px #000;
+        pointer-events: none;
+    }
+
+    /* ===== Изумруд ===== */
+    #emerald-container { position: relative; z-index: 5; cursor: pointer; }
+    #emerald {
+        width: 200px; height: 200px;
+        background-image: url('emerald.png');
+        background-size: contain; background-repeat: no-repeat; background-position: center;
+        filter: drop-shadow(0 0 20px rgba(0,255,68,0.5));
+        transition: transform 0.05s ease;
+    }
+    #emerald:active { transform: scale(0.9); }
+
+    /* ===== Кнопки управления ===== */
+    #controls { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 10; }
+    .control-btn {
+        width: 48px; height: 48px; border-radius: 50%;
+        border: 2px solid #555; background: #333; color: white;
+        font-size: 1.3rem; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        touch-action: manipulation;
+    }
+    .control-btn:active { background: #444; }
+    .control-btn { box-shadow: 0 2px 12px rgba(0,0,0,.55); }
+    .control-btn:focus-visible, .mobile-setting-btn:focus-visible { outline: 2px solid #9cff9c; outline-offset: 2px; }
+
+    /* Питомцы вокруг основного изумруда: не перехватывают нажатия. */
+    #emerald-container { isolation: isolate; }
+    #pet-companions { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
+    .pet-companion {
+        position: absolute; width: 84px; height: 91px; top: 55%;
+        display: flex; align-items: center; flex-direction: column; justify-content: center;
+        transform: translateY(-45%); pointer-events: none;
+        filter: drop-shadow(0 6px 5px rgba(0,0,0,.66));
+    }
+    /* Два сверху, два снизу: купленные питомцы не перекрывают изумруд. */
+    .pet-companion[data-slot="0"], .pet-companion[data-slot="2"] { right: calc(100% + 8px); }
+    .pet-companion[data-slot="1"], .pet-companion[data-slot="3"] { left: calc(100% + 8px); }
+    .pet-companion[data-slot="0"], .pet-companion[data-slot="1"] { top: 27%; }
+    .pet-companion[data-slot="2"], .pet-companion[data-slot="3"] { top: 86%; }
+    .pet-companion img {
+        width: 77px; height: 77px; object-fit: contain;
+        image-rendering: pixelated;
+        animation: petFloat 2.5s ease-in-out infinite alternate;
+        filter: drop-shadow(0 0 7px rgba(70,255,132,.45));
+    }
+    .pet-companion[data-slot="1"] img, .pet-companion[data-slot="3"] img { animation-delay: -1.25s; }
+    .pet-companion.inactive img { animation: none; filter: grayscale(.85) brightness(.7); opacity: .72; }
+    .pet-level-mark {
+        position: absolute; bottom: 0; background: rgba(11,35,21,.9);
+        border: 1px solid #67dc79; border-radius: 999px; color: #d9ffdf;
+        padding: 1px 7px; font-size: 10px; font-weight: 700;
+        letter-spacing: .05em;
+    }
+    .pet-companion.inactive .pet-level-mark { border-color: #89938c; color: #ddd; background: rgba(22,22,22,.85); }
+    @keyframes petFloat {
+        from { transform: translateY(3px) rotate(-3deg); }
+        to { transform: translateY(-6px) rotate(3deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .pet-companion img { animation: none; }
+    }
+    /* Дополнительные настройки внутри открытого мобильного магазина. */
+    #mobile-menu-settings { display: none; }
+    .pet-item-img { width: 38px; height: 38px; object-fit: contain; image-rendering: pixelated; }
+    @media(max-width:768px) {
+        #controls { position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); right: max(12px, env(safe-area-inset-right)); z-index: 60; }
+        .control-btn { min-width: 44px; min-height: 44px; }
+        #mobile-menu-settings {
+            display: flex; flex-shrink: 0; align-items: center; gap: 10px;
+            padding: 10px 12px max(12px, env(safe-area-inset-bottom));
+            background: #242b25; border-top: 1px solid #486049;
+        }
+        .mobile-setting-btn {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            flex: 1; min-width: 0; min-height: 43px; padding: 8px 10px;
+            border: 1px solid #4c6550; border-radius: 9px;
+            background: #354236; color: #efffee; font-size: 13px; font-weight: 700;
+            cursor: pointer; touch-action: manipulation;
+        }
+        .pet-companion { width: 67px; height: 75px; }
+        .pet-companion img { width: 60px; height: 60px; }
+        .pet-companion[data-slot="0"], .pet-companion[data-slot="2"] { right: calc(100% + 1px); }
+        .pet-companion[data-slot="1"], .pet-companion[data-slot="3"] { left: calc(100% + 1px); }
+        .pet-companion[data-slot="0"], .pet-companion[data-slot="1"] { top: 22%; }
+        .pet-companion[data-slot="2"], .pet-companion[data-slot="3"] { top: 88%; }
+        .pet-level-mark { font-size: 9px; }
+    }
+    @media(max-width:350px) {
+        .pet-companion { width: 51px; height: 59px; }
+        .pet-companion img { width: 48px; height: 48px; }
+        .pet-companion[data-slot="0"], .pet-companion[data-slot="2"] { right: calc(100% - 2px); }
+        .pet-companion[data-slot="1"], .pet-companion[data-slot="3"] { left: calc(100% - 2px); }
+    }
+
+    /* ===== Бустер ===== */
+    #booster {
+        position: absolute; width: 70px; height: 70px;
+        background-image: url('book.png');
+        background-size: contain; background-repeat: no-repeat; background-position: center;
+        z-index: 100; cursor: pointer; display: none;
+        filter: drop-shadow(0 0 15px #f1c40f);
+        animation: pulse 1s infinite alternate;
+        transition: left 3.6s ease-in-out, top 3.6s ease-in-out;
+    }
+    @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+
+    #boost-status {
+        position: absolute; top: 170px; font-size: 1.3rem; color: #ff3333; font-weight: bold;
+        z-index: 5; display: none; background: rgba(0,0,0,0.85); padding: 6px 14px; border-radius: 5px;
+        animation: blink 1s infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* ===== Частицы ===== */
+    .particle { position: absolute; pointer-events: none; color: #55ff55; font-weight: bold; font-size: 1.5rem; text-shadow: 2px 2px #000; z-index: 6; animation: floatUp 0.6s ease-out forwards; }
+    .particle.crit { color: #ffdd00; font-size: 2.2rem; }
+    @keyframes floatUp {
+        0% { opacity: 1; transform: translate(0,0) scale(1); }
+        100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(0.8); }
+    }
+
+    /* ===== Вспышка при повышении уровня ===== */
+    #levelup-flash {
+        position: absolute; inset: 0; pointer-events: none; z-index: 50;
+        background: radial-gradient(circle, rgba(255,215,0,0.55), rgba(255,215,0,0) 70%);
+        opacity: 0;
+    }
+    #levelup-flash.show { animation: flashAnim 0.9s ease-out; }
+    @keyframes flashAnim {
+        0% { opacity: 0; }
+        30% { opacity: 1; }
+        100% { opacity: 0; }
+    }
+
+    /* ===== Оверлей для мобильных (затемнение) ===== */
+    #menu-overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+        z-index: 99; display: none;
+        opacity: 0; transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+    #menu-overlay.show { display: block; opacity: 1; pointer-events: auto; }
+
+    /* ===== МОБИЛЬНАЯ АДАПТАЦИЯ ===== */
+    @media (max-width: 768px) {
+        /* На мобильном меню по умолчанию скрыто */
+        #left-menu { position: fixed; left: 0; top: 0; }
+        #left-menu.collapsed { transform: translateX(-100%); width: min(100vw, 380px); }
+
+        /* Верхняя панель — компактнее */
+        #top-info { padding: 10px 15px; top: 12px; max-width: 92%; }
+        #resource-count { font-size: 1.5rem; }
+        #resource-count .res-icon { width: 26px; height: 26px; }
+        #pps-count { font-size: 0.8rem; }
+        #level-info { font-size: 0.8rem; }
+
+        /* Изумруд меньше */
+        #emerald { width: 160px; height: 160px; }
+
+        /* Кнопки управления */
+        #controls { bottom: 15px; right: 15px; }
+        .control-btn { width: 44px; height: 44px; font-size: 1.2rem; }
+
+        /* Бустер меньше */
+        #booster { width: 60px; height: 60px; }
+
+        /* Boost статус */
+        #boost-status { top: 145px; font-size: 1.1rem; }
+    }
+
+    @media (max-width: 480px) {
+        #top-info { padding: 8px 12px; }
+        #resource-count { font-size: 1.3rem; }
+        #emerald { width: 140px; height: 140px; }
+        .control-btn { width: 40px; height: 40px; font-size: 1rem; }
+    }
+
+    /* ===== Очень низкие экраны ===== */
+    @media (max-height: 600px) {
+        #top-info { padding: 8px 12px; top: 8px; }
+        #resource-count { font-size: 1.4rem; }
+        #emerald { width: 130px; height: 130px; }
+        #exp-bar-container { height: 16px; }
+    }
+    /* ===== CrazyGames SDK: загрузка, реклама и буст в магазине ===== */
+    .platform-loading, .crazy-ad-blocker {
+        position: fixed; inset: 0; z-index: 500; display: flex;
+        align-items: center; justify-content: center;
+        background: rgba(0, 0, 0, .89); padding: 20px;
+        text-align: center;
+    }
+    .crazy-ad-blocker { z-index: 550; background: rgba(0, 0, 0, .83); }
+    .platform-loading-card, .crazy-ad-card {
+        max-width: 300px; width: 100%; padding: 20px; border-radius: 12px;
+        background: #263127; border: 2px solid #55ff55;
+        box-shadow: 0 12px 40px rgba(0,0,0,.6);
+        color: white; font-weight: bold; line-height: 1.5;
+    }
+    .platform-loading-gem { font-size: 2.2rem; margin-bottom: 8px; }
+    .boost-offer { margin-bottom: 15px; }
+    .boost-offer-heading { color: #80e98a; font-weight: 800; font-size: 1.04rem; }
+    .boost-offer-description { margin: 5px 0 10px; color: #dfebdf; font-size: .84rem; }
+    .boost-offer-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .boost-offer-actions > button { flex: 1 1 145px; min-height: 43px; margin-top: 0; white-space: normal; }
+    #boost-ad-button { background: #365c80; }
+    #boost-ad-button:hover:enabled { background: #45739e; }
+    .boost-offer-status { color: #ccc; margin-top: 6px; font-size: .77rem; }
+    @media (max-width: 480px) { .boost-offer-actions > button { flex-basis: 100%; } }
+
+    /* V10.3: постоянное предупреждение о проблемах сохранения (не исчезает как toast). */
+    #save-warning {
+        position: fixed; bottom: 16px; left: 16px; z-index: 440;
+        width: min(400px, calc(100vw - 32px)); display: none;
+        background: #342b22; border: 2px solid #ffb85c; color: #fff;
+        border-radius: 10px; padding: 12px 14px;
+        box-shadow: 0 6px 28px rgba(0,0,0,.65); line-height: 1.35;
+        font-size: .85rem;
+    }
+    #save-warning.show { display: block; }
+    #save-warning strong { color: #ffd69d; display: block; margin-bottom: 3px; }
+    #save-warning-message { white-space: pre-line; overflow-wrap: anywhere; }
+    #save-retry {
+        background: #f2a943; color: #20170b; border: 0; border-radius: 6px;
+        margin-top: 9px; padding: 9px 14px; min-height: 39px;
+        font-weight: 700; cursor: pointer;
+    }
+    #save-retry:active { transform: scale(.98); }
+    @media(max-width: 768px) {
+        #save-warning { bottom: max(78px, calc(env(safe-area-inset-bottom) + 70px)); left: 10px;
+            width: calc(100vw - 20px); max-height: 40vh; overflow-y: auto; }
+    }
+</style>
+</head>
+<body>
+
+<!-- Кнопка открытия меню -->
+<button id="menu-toggle" onclick="toggleMenu()">
+    ☰
+    <span class="badge" id="menu-badge"></span>
+</button>
+
+<!-- Оверлей (для мобильных — затемнение позади меню) -->
+<div id="menu-overlay" onclick="closeMenu()"></div>
+
+<!-- ===== ЛЕВОЕ МЕНЮ ===== -->
+<div id="left-menu" class="">
+    <div class="menu-header">
+        <span id="menu-title">Miner Shop</span>
+        <button class="close-btn" onclick="closeMenu()">✕</button>
+    </div>
+    <div class="tabs" id="tabs-bar">
+        <div class="tab active" id="tab-pickaxes" onclick="switchTab('pickaxes')"><span class="tab-icon">⛏️</span><span class="tab-label">Pickaxes</span></div>
+        <div class="tab" id="tab-passives" onclick="switchTab('passives')"><span class="tab-icon">⚙️</span><span class="tab-label">Production</span></div>
+        <div class="tab" id="tab-enchants" onclick="switchTab('enchants')"><span class="tab-icon">✨</span><span class="tab-label">Enchant</span></div>
+        <div class="tab" id="tab-pets" onclick="switchTab('pets')"><span class="tab-icon">🐾</span><span class="tab-label">Pets</span></div>
+        <div class="tab" id="tab-prestige" onclick="switchTab('prestige')"><span class="tab-icon">💎</span><span class="tab-label">Prestige</span></div>
+        <div class="tab" id="tab-achievements" onclick="switchTab('achievements')"><span class="tab-icon">🏆</span><span class="tab-label">Awards</span></div>
+    </div>
+    <div id="list-pickaxes" class="shop-list active"></div>
+    <div id="list-passives" class="shop-list">
+        <div id="boost-offer" class="feature-summary boost-offer">
+            <div class="boost-offer-heading" id="boost-offer-heading">⚡ Boost ×3 for 30 seconds</div>
+            <div id="boost-offer-explanation" class="boost-offer-description"></div>
+            <div class="boost-offer-actions">
+                <button id="boost-ad-button" class="buy-btn" type="button" onclick="showRewardedAd()" style="display:none"></button>
+                <button id="boost-coins-button" class="buy-btn" type="button" onclick="buyStoreBoost()"></button>
+            </div>
+            <div id="boost-offer-status" class="boost-offer-status"></div>
+        </div>
+    </div>
+    <div id="list-enchants" class="shop-list"></div>
+    <div id="list-pets" class="shop-list"></div>
+    <div id="list-prestige" class="shop-list"></div>
+    <div id="list-achievements" class="shop-list"></div>
+    <div id="mobile-menu-settings" aria-label="Game settings">
+        <button class="mobile-setting-btn" id="sound-mobile-btn" type="button" onclick="toggleSound()">🔊 Sound</button>
+        <button class="mobile-setting-btn" id="lang-mobile-btn" type="button" onclick="toggleLang()">🇬🇧 English</button>
+    </div>
+</div>
+
+<!-- ===== ИГРОВАЯ ЗОНА ===== -->
+<div id="game-area">
+    <div id="bg-overlay"></div>
+
+    <div id="top-info">
+        <div id="resource-count"><span id="resource-number">0</span><div class="res-icon"></div></div>
+        <div id="pps-count">Passive income: +0/sec</div>
+        <div id="prestige-mini" style="font-size:.78rem;color:#c7a5ff"></div>
+        <div id="level-info">Level 1: Stone Cave</div>
+        <div id="exp-bar-container">
+            <div id="exp-bar"></div>
+            <div id="exp-text">0%</div>
+        </div>
+    </div>
+
+    <div id="boost-status">BOOST X3! 00:15</div>
+
+    <div id="emerald-container" onpointerdown="clickEmerald(event)">
+        <div id="emerald"></div>
+        <div id="pet-companions" aria-label="Active pets"></div>
+    </div>
+
+    <div id="booster" onpointerdown="activateBooster(event)" title="X3 Boost"></div>
+
+    <div id="levelup-flash"></div>
+
+    <div id="controls">
+        <button type="button" class="control-btn" id="sound-btn" onclick="toggleSound()">🔊</button>
+        <button type="button" class="control-btn" id="lang-btn" onclick="toggleLang()">🇬🇧</button>
+    </div>
+</div>
+<div id="prestige-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="prestige-modal-title">
+    <div class="modal-card">
+        <h3 id="prestige-modal-title"></h3>
+        <div id="prestige-modal-body"></div>
+        <div class="modal-actions">
+            <button class="secondary" type="button" onclick="closePrestigeModal()" id="prestige-cancel"></button>
+            <button type="button" onclick="confirmPrestige()" id="prestige-confirm"></button>
+        </div>
+    </div>
+</div>
+<div id="toast" role="status"></div>
+<div id="save-warning" role="alert" aria-live="assertive">
+    <strong id="save-warning-title">Save problem</strong>
+    <div id="save-warning-message"></div>
+    <button id="save-retry" type="button" onclick="retryCrazySave()">Retry</button>
+</div>
+<div id="platform-loading" class="platform-loading" role="status" aria-live="polite">
+    <div class="platform-loading-card"><div class="platform-loading-gem">💎</div><div id="platform-loading-label">Loading Emerald Miner...</div></div>
+</div>
+<div id="crazy-ad-blocker" class="crazy-ad-blocker" role="status" aria-live="polite" style="display:none">
+    <div class="crazy-ad-card"><div class="platform-loading-gem">🎬</div><div id="crazy-ad-label">Preparing ad...</div></div>
+</div>
+
+<script>
+/* =========================================================
+   CRAZYGAMES HTML5 SDK V3
+========================================================= */
+let crazySDK = null;
+let crazyReady = false;
+let crazyDataReady = false;
+let crazyAdsAllowed = false;
+let crazyGameplayRunning = false;
+let crazyAdBusy = false;
+let crazyAdPlaying = false;
+let crazyAdTimeout = null;
+let crazyAdCooldownUntil = 0;
+let crazyAdDisabled = false;
+let crazyLastProgress = -1;
+let crazyHighestLevel = 1;
+let crazyUsingOfflineStorage = false;
+const CRAZY_SAVE_KEY = 'emeraldMinerSaveCrazyGamesV1';
+// V10.3: для одного сеанса разрешены записи лишь поверх версии,
+// которую мы действительно загрузили или записали сами.
+let crazySaveBaselineRaw = null;
+let crazySaveRevision = 0;
+let crazySaveIssue = null;        // read | write | conflict | auth | offline
+let crazyAccountChangePending = false;
+let crazyAuthListener = null;
+const OFFLINE_SAVE_KEY = 'emeraldMinerCrazyOfflineV1';
+const REWARDED_COOLDOWN_MS = 5 * 60 * 1000;
+const STORE_BOOST_COST = 5000;
+
+
+/* =========================================================
+   СОСТОЯНИЕ ИГРЫ
+========================================================= */
+let resources = 0;
+let totalExp = 0;
+let currentLevel = 1;
+let soundEnabled = true;
+let currentLang = 'en';
+let boostMultiplier = 1;
+let boosterTimer = null;
+let boosterMoveTimer = null;
+let isMobile = window.innerWidth <= 768;
+let cycleEarned = 0;             // Изумруды, добытые за текущий цикл (не подарки)
+let allTimeEarned = 0;           // Вся добыча за всё время
+let totalClicks = 0;
+let prestigeCount = 0;
+let crystals = 0;
+let prestigeUpgrades = { click: 0, passive: 0 };
+let enchants = { efficiency: 0, luck: 0, automation: 0 };
+let petsOwned = {};              // { slime: { level: 1, active: true }, ... }
+let petDisplayMigrationApplied = false; // Старые сохранения с одним слотом
+let achievementClaims = {};    // id: true
+let achievementUnlocked = {};  // id: true
+let cyclePickaxesBought = 0;
+let enchantUpgradesBought = 0;
+let distinctPetsBought = {};
+let selectedTab = 'pickaxes';
+let toastTimeout = null;
+let lastUiRender = 0;
+let gameLoading = true;
+
+/* =========================================================
+   ЛОКАЛИЗАЦИЯ
+========================================================= */
+const langData = {
+    ru: {
+        gameTitle: "Emerald Miner",
+        menuTitle: "Магазин шахтера",
+        tabPickaxes: "Кирки", tabPassives: "Добыча",
+        pps: "Пассивный доход: +", lvl: "Уровень ", boost: "БУСТ X3! ",
+        fist: "Обычный кулак",
+        woodP: "Деревянная кирка", stoneP: "Каменная кирка",
+        goldP: "Золотая кирка", ironP: "Железная кирка",
+        diamondP: "Алмазная кирка", netherP: "Незеритовая кирка",
+        endP: "Кирка Края",
+        rod1: "Обычная удочка", rod2: "Удочка (Везучий рыбак I)",
+        rod3: "Удочка (Везучий рыбак II)", rod4: "Удочка (Везучий рыбак III)",
+        golem1: "Железный голем", golem2: "Золотой голем",
+        golem3: "Алмазный голем", golem4: "Незеритовый голем",
+        golem5: "Изумрудный голем", golem6: "Голем Края",
+        buy: "Купить", max: "Макс.",
+        perClick: "за клик", perSec: "рес/сек",
+        needPrev: "Сначала купите: ", needPassive: "Требуется купить: ",
+        adBoost: "Смотреть рекламу ×3"
+    },
+    en: {
+        gameTitle: "Emerald Miner",
+        menuTitle: "Miner Shop",
+        tabPickaxes: "Pickaxes", tabPassives: "Production",
+        pps: "Passive income: +", lvl: "Level ", boost: "BOOST X3! ",
+        fist: "Regular Fist",
+        woodP: "Wooden Pickaxe", stoneP: "Stone Pickaxe",
+        goldP: "Golden Pickaxe", ironP: "Iron Pickaxe",
+        diamondP: "Diamond Pickaxe", netherP: "Netherite Pickaxe",
+        endP: "End Pickaxe",
+        rod1: "Normal Fishing Rod", rod2: "Fishing Rod (Lucky I)",
+        rod3: "Fishing Rod (Lucky II)", rod4: "Fishing Rod (Lucky III)",
+        golem1: "Iron Golem", golem2: "Gold Golem",
+        golem3: "Diamond Golem", golem4: "Netherite Golem",
+        golem5: "Emerald Golem", golem6: "End Golem",
+        buy: "Buy", max: "Max",
+        perClick: "per click", perSec: "res/sec",
+        needPrev: "Buy first: ", needPassive: "Requires: ",
+        adBoost: "Watch Ad ×3"
+    }
+};
+
+/* =========================================================
+   НОВЫЕ СИСТЕМЫ / ЭКОНОМИКА
+========================================================= */
+const enchantDefs = [
+    { id: 'efficiency', titleRu: 'Эффективность', titleEn: 'Efficiency', costs: [500,2500,12000,50000,150000], bonus: 0.10, unlock: 3 },
+    { id: 'luck', titleRu: 'Удача', titleEn: 'Fortune', costs: [1500,7500,30000,90000,240000], bonus: 0.02, unlock: 3 },
+    { id: 'automation', titleRu: 'Автодобыча', titleEn: 'Auto Mining', costs: [3000,12000,45000,120000,300000], bonus: 0.10, unlock: 3 }
+];
+const PET_SPRITES = Object.freeze({
+    'slime': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAB70lEQVR42u3dPS8DYQDA8asIGxEkwt4YTZUyi09gtjF0Mtq6GU0GNjNfQGwGjS6M0sXEIiJsRMLcS9zl9F6e6u+3NX273P3z3OO5xkURAAAAAAAAAAAAAAAAADBMakV/weTW6rfd/HcfZzeFHqMxu3i0CUAACAABIAAEgHWAiv/OX9yrJz6/0VwLeodedq4Tn3867AW1TmAEcApAAIys8aK/YKIxZS8PsD8+u+9GAASAAAhiDuD6fljixyPruoARwCkAAWAOEIrjZivT63c7R46iEQABIAACmAOUfT0//nlp1+OrNre+kO0Nsdfn/XsCI4BTAALAHCAU59Gto2IEQAAIAAEgAASAABAAAkAACID8lH4tIPTr9UYABIAAMAeoxlv7vu/xy0W37/HsZiPx/dPtZdtrBEAACIAhnAPEpZ1Dba8RAAEgAASAABAAAmB41wGqXhv/79trBEAACAABIAAEIACsA+Qp/n/sqr5n0FfvNfH555ODvsfzO/vJO6w+U+r2u2cQAkAAFKSW9wem3VOo7DlB2hwg86Sp4DlA2jl/0HsFGwEQAAKgqHWANEvbK5le/3h6F/Q52wiAABAAAkAACAABYB3gdw+tK3vdCIAAEADVq1W9AWm/H/jv8r6+bwRAAAgAAAAAAACAKIp+AOvxUvr3LWbjAAAAAElFTkSuQmCC',
+    'bat': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAACcUlEQVR42u3dvS4EYRQGYCsuQamUbWU7CdspJQq1QieuYnu96EjUCsmWuiXRiVaUSvdAayey4zPfz/w8T7cZxu54nXPmM5lZWwMAAAAAAAAA+mbU9Q+wvbX79fP1+8fzaEg/v6l1fwPDJgACwJBt9O0Dpe7J1f2rAAgAAoAZoJ8zQd96vgqAACAA9HUGOD44W3p993AVtafX7V8FQAAQAMwA3ZgJQr9fBUAAEADMAH/T9WvmSkt9/FQALQABwAwQq0e1fSZIfV6f+vqDuu2hP08F0AIQAMwAqXr+ZDxdev3ytsg6c3Rd6PELnUFUAC0AAWCwRrF7fKimM0Hu8/w6Ta8RzH08VQAtAAHAOkCqnpRa36/Ziz1DVGcEFUALQAAwA7SlZ8VeFyg9k9StC5SesVQALQABwAyQy854N2j7zfwibP/Xnyu3v55uFt1f6PF4fXtWARAABAABQAAQAASAZOsAv1xHvnSNYNuvD2BZ9X8r1d+vCqAFIACYAXJJvbbddG0+9f6qM1Tq46ECIAAIALlmgOp559DWDVI/PyD28VUBtAAEADNArJ7U9pngfnEZ9PVH0/Oi7zf18VUBtAAEADNArJ5Ud1+6yXha9D5/pXt6qLrjWb2nk3sEIQAIAKlmgKb39687b+36/QFyf/7QGUEFQAAQAP46A8R+pk91f6XXBbp23h97fyqAFoAAMFjFn+Mb+xlA17Pbldvnj09B+zvc31u5/XR20uoZQAVAABAA/rsOkPu8N/S5d217jmDo+83d81UABAABoC3rAG1bR+jaebwKgAAgAAx1Big9E3St56sACAACAAAAAAAAAADQW9/F79gx5uEoSwAAAABJRU5ErkJggg==',
+    'fox': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAACwUlEQVR42u3dPWsUURQG4F1RxKikzV8QxM4oyDaWtim0sbGxCIiIqcVaCEGw8B9okdbSZpsYuyD4F+z9Kiy01DnC3lzufO59nm7JZmc2eXPOmTuT2dkMAAAAqMW87w1uX138/vfx8aflfEo/sKnvf3TG30DdBEAAqNlZPTVv/1QABAABwDpAPz217Zng0fevje2/vHh5Pub9VQEQAASAdV0HiJZPLjQeL/ZX9+DSnhtngqMbd4r29/wDFQABQAAwA3QzE/xceZweZ4LY43c2Lq3c3lHm/qTWDca+LqACaAEIAGaAqcidCXLd/PBuVrIuoAIgAAgAZoBhxB4eHf74VvZ6b3dUAAQAAcAM0IOTj18S6wJbjcd7LW///tNbzf0JX792fSvsz+rrGcZ2bkAF0AIQAMwA6+JFOE7fu3vot6wCIAAIABXMAKUzQXz+Scv7M7ZrBlUALQABwAxQC+sEKgACgAAwjRkgnm/veiboe/sqAAKAACAACAACgABgHeCv+P//Kal7+ES/th82Hp87ft3r9kvvZ1B6PYEKoAUgAJgBhpLbM0vFnp/++kGv7z935ii9xlAF0AIQAMwAXen7c/dSPX7sSmcCFQABQAA4pc7/Ly01A5SuA6R6/u17ecfx7988znp+PHcQpXp46ftPvX5qXUAF0AIQAAQAAUAAEACqsvb3B8g9rp+a0s9VVAG0AAQAM8BQYs9KrY2P/Xx/1+fvVQAEAAFgKjNAPO7s+xrBsR+3qwAIAALAQAb/DLuurxkc+ri/7f0vvQbSuQC0AASAvtYBSsXPDr6y+yzr+z+/ep71/NzXT90/IPdchwqAACAA1DIDOFegAiAACADWAbo4ru/+9TezZpzFft6MU7pu4P4AaAEIAOsyA9Tm/+sNDop6vgqAACAATGUG2F1u+i212PNVAAQAAQAAAAAAAKjCH3vF1Rj2+GhXAAAAAElFTkSuQmCC',
+    'dragon': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAACuUlEQVR42u3dP2sUQRgH4DuxsxK1EvQLCBJJFcHKQqxtAn4AK8HSxuK+gK2pE0hjHawFBSEQBD+BYGXEKq2xdQePuWFmZ2Zvn6c78mcvc7+877vD3t5iAQAAAAAAAAAAAAAATNVy6n/AxemLy38fX9t9t2x5/Lsvvwy+fv75rOs1vuJ/YN4EQACYs6u1D3hzb+dyzB459u+f+vqoAAgAAkCtGSDsaaV7XnjefePNveE3rBZFe2r4fB+cX3S9PioAAoAAsOkMkNtzYj2ttthMkP37JrZPEP68CqAFIACYAWr19D+7t4cJPP1R9by3tdh6xtan9OujAmgBCACztazd86OJjPS83s/Tf62+db0+KgACgACwbh8gPO8OZ4LU89TS+wRTl9rzS69f+PqqAFoAAoAZoNee1vt5f+z5pO4L1F5vFUALQAAwA2ycmOC8svUM8OzRTlcL+v7jWdP1S903UQG0AAQAM0A3iYz0sN7O+3P3BVrPVCqAFoAAYAZYJ3Z9QG/7ArP7D47MTLH3VagAWgACgBlgqg4eHw4ef/90PHh85+F+0X2E8Dw+PN7B6rDo8VQABAABYCozQOvr+MOeP7Xj1V4/FUALQAAwA2yq9L12GXe9VQAEAAFgjeb34EudCXL31n+e/E76/ltPr2cdL/W9gbXvi6gCaAEIAPYBejnPLb1P8Pb+k8Hj5yfHWT8fevX1Q9fn+SoAAoAA0OsMUNvR632vugqAACAAzHAG2Da5n7GkAmgBCABmAPro4SoAAoAAYAb4v/Aau97ef596DWDp+xWk7guoAFoAAoAZoBdjXyPYWm8ziwqgBSAAzNZyak84NhPE7lWc+16/2HsLw3v81O75sX0Inx2MFoAA0Os+QOseGTXy5yHkPj/XBKIFIABs6z5A6r7Atsu9v4AKoAUgAAAAAABsvb9k5ecT7sr/aQAAAABJRU5ErkJggg=='
+});
+const petDefs = [
+    { id: 'slime', nameRu: 'Изумрудный слизень', nameEn: 'Emerald Slime', cost: 4000, click: .10, passive: 0, icon: '🟢' },
+    { id: 'bat', nameRu: 'Шахтёрская летучая мышь', nameEn: 'Mining Bat', cost: 18000, click: 0, passive: .15, icon: '🦇' },
+    { id: 'fox', nameRu: 'Кристальный лис', nameEn: 'Crystal Fox', cost: 70000, click: .08, passive: .08, icon: '🦊' },
+    { id: 'dragon', nameRu: 'Изумрудный дракон', nameEn: 'Emerald Dragon', cost: 180000, click: .20, passive: .20, icon: '🐉' }
+];
+const achievements = [
+    { id: 'steps', titleRu: 'Первые шаги', titleEn: 'First Steps', descRu: 'Сделать 100 кликов', descEn: 'Make 100 clicks', reward: 100, goal: 100, progress: () => totalClicks },
+    { id: 'miner', titleRu: 'Настоящий шахтёр', titleEn: 'True Miner', descRu: 'Сделать 1 000 кликов', descEn: 'Make 1,000 clicks', reward: 1000, goal: 1000, progress: () => totalClicks },
+    { id: 'picks', titleRu: 'Коллекционер кирок', titleEn: 'Pickaxe Collector', descRu: 'Купить 4 кирки за один цикл', descEn: 'Buy 4 pickaxes in one run', reward: 2500, goal: 4, progress: () => cyclePickaxesBought },
+    { id: 'mage', titleRu: 'Начинающий маг', titleEn: 'Apprentice Enchanter', descRu: 'Купить 3 ступени зачарований', descEn: 'Buy 3 enchantment levels', reward: 5000, goal: 3, progress: () => enchantUpgradesBought },
+    { id: 'animal', titleRu: 'Любитель животных', titleEn: 'Animal Lover', descRu: 'Приобрести 2 разных питомцев', descEn: 'Own 2 distinct pets', reward: 7500, goal: 2, progress: () => Object.keys(distinctPetsBought).length },
+    { id: 'wealthy', titleRu: 'Богач', titleEn: 'Wealthy', descRu: 'Добыть 100 000 за один цикл', descEn: 'Mine 100,000 in one run', reward: 10000, goal: 100000, progress: () => cycleEarned },
+    { id: 'end', titleRu: 'Покоритель Края', titleEn: 'End Conqueror', descRu: 'Достичь 11-го уровня', descEn: 'Reach level 11', reward: 25000, goal: 11, progress: () => currentLevel },
+    { id: 'million', titleRu: 'Миллионер', titleEn: 'Millionaire', descRu: 'Добыть 1 000 000 за всё время', descEn: 'Mine 1,000,000 total', reward: 50000, goal: 1000000, progress: () => allTimeEarned },
+    { id: 'reborn', titleRu: 'Новая жизнь', titleEn: 'New Life', descRu: 'Выполнить первое перерождение', descEn: 'Prestige once', reward: 5000, goal: 1, progress: () => prestigeCount },
+    { id: 'legend', titleRu: 'Легенда шахты', titleEn: 'Mine Legend', descRu: 'Выполнить 5 перерождений', descEn: 'Prestige 5 times', reward: 100000, goal: 5, progress: () => prestigeCount }
+];
+Object.assign(langData.ru, {
+    tabEnchants: 'Чары', tabPets: 'Питомцы', tabPrestige: 'Престиж', tabAchievements: 'Награды',
+    requiresLevel: 'Открывается на уровне ', currency: 'изумрудов', crystals: 'Кристаллы',
+    enchantHelp: 'Чары действуют в текущем цикле и сбрасываются при перерождении.',
+    petHelp: 'Купленные питомцы видны рядом с изумрудом. До 2 активных питомцев дают бонус, остальные отображаются приглушёнными. Оба слота доступны с 4-го уровня. При перерождении питомцы сбрасываются.',
+    prestigeHelp: 'Кристаллы и постоянные улучшения сохраняются при перерождении.',
+    achievementHelp: 'Награды выдаются один раз и не восстанавливаются после перерождения.',
+    improve: 'Улучшить', adopt: 'Купить', activate: 'Активировать', deactivate: 'Убрать',
+    tier: 'Ступень', petLevel: 'Уровень питомца', maxLevel: 'Максимальный уровень',
+    done: 'Получено', claim: 'Забрать награду', ready: 'Готово', inProgress: 'В процессе',
+    active: 'Активен', inactive: 'Неактивен', slots: 'Слоты', currentCycle: 'Добыто за цикл',
+    totalMined: 'Добыто за всё время', prestigeCount: 'Перерождений',
+    clickBonus: 'Клики', passiveBonus: 'Пассивка', chanceCrit: 'Шанс крита',
+    newRun: 'Переродиться', prestigeLocked: 'Нужны 11-й уровень и Кирка Края.',
+    prestigeTitle: 'Подтвердить перерождение?', prestigeBody: 'Будут сброшены изумруды, уровни, кирки, добыча, зачарования и питомцы. Кристаллы, постоянные улучшения и достижения сохранятся.',
+    cancel: 'Отмена', confirm: 'Переродиться', prestigeReward: 'Кристаллов за сброс',
+    slotFull: 'Нет свободного слота', needCrystals: 'Недостаточно кристаллов',
+    claimToast: 'Награда получена', prestigeToast: 'Перерождение завершено!',
+    buyToast: 'Улучшение куплено', savedBuff: 'Постоянный бонус',
+    legacyClick: 'Наследие шахтёра', legacyPassive: 'Дух шахты',
+    prestigeWarning: 'Продолжай добывать до 1 500 000 / 3 000 000 ради большего количества кристаллов.'
+});
+Object.assign(langData.en, {
+    tabEnchants: 'Enchant', tabPets: 'Pets', tabPrestige: 'Prestige', tabAchievements: 'Awards',
+    requiresLevel: 'Unlocks at level ', currency: 'emeralds', crystals: 'Crystals',
+    enchantHelp: 'Enchantments last for one run and reset on prestige.',
+    petHelp: 'All owned pets appear next to the emerald. Up to 2 active pets grant bonuses; inactive pets are dimmed. Both slots unlock at level 4. Pets reset on prestige.',
+    prestigeHelp: 'Crystals and permanent upgrades persist through prestige.',
+    achievementHelp: 'Achievement rewards are one-time and remain claimed after prestige.',
+    improve: 'Upgrade', adopt: 'Buy', activate: 'Activate', deactivate: 'Unequip',
+    tier: 'Tier', petLevel: 'Pet level', maxLevel: 'Max level',
+    done: 'Claimed', claim: 'Claim reward', ready: 'Ready', inProgress: 'In progress',
+    active: 'Active', inactive: 'Inactive', slots: 'Slots', currentCycle: 'Mined this run',
+    totalMined: 'Mined overall', prestigeCount: 'Prestiges',
+    clickBonus: 'Click', passiveBonus: 'Passive', chanceCrit: 'Crit chance',
+    newRun: 'Prestige', prestigeLocked: 'Requires level 11 and the End Pickaxe.',
+    prestigeTitle: 'Confirm prestige?', prestigeBody: 'Your emeralds, level, pickaxes, production, enchantments and pets will reset. Crystals, permanent upgrades and achievements will stay.',
+    cancel: 'Cancel', confirm: 'Prestige', prestigeReward: 'Crystals from reset',
+    slotFull: 'All pet slots occupied', needCrystals: 'Not enough crystals',
+    claimToast: 'Reward claimed', prestigeToast: 'Prestige completed!',
+    buyToast: 'Upgrade purchased', savedBuff: 'Permanent bonus',
+    legacyClick: 'Miner Legacy', legacyPassive: 'Spirit of the Mine',
+    prestigeWarning: 'Keep mining to reach 1,500,000 / 3,000,000 for more crystals.'
+});
+function localized(ru,en) { return currentLang === 'ru' ? ru : en; }
+function fmt(n) { return Math.floor(n).toLocaleString(currentLang === 'ru' ? 'ru-RU' : 'en-US'); }
+function updateIfChanged(el, value) { const str=String(value); if (el.textContent !== str) el.textContent = str; }
+function messageToast(message) {
+    const el = document.getElementById('toast');
+    el.textContent = message; el.style.display = 'block';
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => { el.style.display = 'none'; }, 2200);
+}
+
+const tabMeta = {
+    pickaxes: { icon: '⛏️', ru: () => langData.ru.tabPickaxes, en: () => langData.en.tabPickaxes },
+    passives: { icon: '⚙️', ru: () => langData.ru.tabPassives, en: () => langData.en.tabPassives },
+    enchants: { icon: '✨', ru: () => langData.ru.tabEnchants, en: () => langData.en.tabEnchants },
+    pets: { icon: '🐾', ru: () => langData.ru.tabPets, en: () => langData.en.tabPets },
+    prestige: { icon: '💎', ru: () => langData.ru.tabPrestige, en: () => langData.en.tabPrestige },
+    achievements: { icon: '🏆', ru: () => langData.ru.tabAchievements, en: () => langData.en.tabAchievements }
+};
+const itemIcons = {
+    fist: '👊', woodP: '🪵', stoneP: '🪨', goldP: '🥇', ironP: '⚒️', diamondP: '💎', netherP: '🔥', endP: '🌌',
+    rod1: '🎣', rod2: '🎣', rod3: '🎣', rod4: '🎣',
+    golem1: '🗿', golem2: '🤖', golem3: '💠', golem4: '🔥', golem5: '💚', golem6: '🌌'
+};
+const enchantIcons = { efficiency: '⚒️', luck: '🍀', automation: '⚙️' };
+const achievementIcons = {
+    steps: '👣', miner: '⛏️', picks: '🧰', mage: '✨', animal: '🐾',
+    wealthy: '💰', end: '🌌', million: '💎', reborn: '♻️', legend: '🏆'
+};
+function setTabLabel(tabId, textLabel) {
+    const meta = tabMeta[tabId];
+    const el = document.getElementById(`tab-${tabId}`);
+    if (!el || !meta) return;
+    el.innerHTML = `<span class="tab-icon">${meta.icon}</span><span class="tab-label">${textLabel}</span>`;
+}
+function getShopItemIcon(nameKey) { return itemIcons[nameKey] || '📦'; }
+function getPrestigeCardIcon(id) { return id === 'click' ? '👊' : id === 'passive' ? '⏱️' : '♻️'; }
+function scrollActiveTabIntoView() {
+    const active = document.querySelector('.tab.active');
+    if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
+
+/* =========================================================
+   УРОВНИ
+========================================================= */
+const levels = [
+    { id: 1,  nameRu: "Каменная пещера",       nameEn: "Stone Cave",     expMax: 100,    bonus: 1 },
+    { id: 2,  nameRu: "Угольный пласт",        nameEn: "Coal Vein",      expMax: 200,    bonus: 2 },
+    { id: 3,  nameRu: "Железная жила",         nameEn: "Iron Vein",      expMax: 700,    bonus: 3 },
+    { id: 4,  nameRu: "Лазуритовая глубина",   nameEn: "Lapis Lazuli",   expMax: 3000,   bonus: 4 },
+    { id: 5,  nameRu: "Редстоуновый каньон",   nameEn: "Redstone Rift",  expMax: 8000,   bonus: 5 },
+    { id: 6,  nameRu: "Золотой биом",          nameEn: "Gold Deposit",   expMax: 24000,  bonus: 6 },
+    { id: 7,  nameRu: "Алмазная глубина",      nameEn: "Diamond Core",   expMax: 52000,  bonus: 7 },
+    { id: 8,  nameRu: "Изумрудная расщелина",  nameEn: "Emerald Rift",   expMax: 72000,  bonus: 8 },
+    { id: 9,  nameRu: "Обсидиановый завал",    nameEn: "Obsidian Wall",  expMax: 160000, bonus: 9 },
+    { id: 10, nameRu: "Шахта Незера",          nameEn: "Netherite Mine", expMax: 320000, bonus: 10 },
+    { id: 11, nameRu: "Шахта Края",            nameEn: "End Mine",       expMax: 640000, bonus: 11 }
+];
+
+/* =========================================================
+   КИРКИ
+========================================================= */
+const pickaxes = [
+    { id: 0, nameKey: "fist",     cost: 0,      power: 1,   purchased: true,  passiveReq: null },
+    { id: 1, nameKey: "woodP",    cost: 30,     power: 3,   purchased: false, passiveReq: null },
+    { id: 2, nameKey: "stoneP",   cost: 150,    power: 8,   purchased: false, passiveReq: 1 },
+    { id: 3, nameKey: "goldP",    cost: 1000,   power: 15,  purchased: false, passiveReq: 3 },
+    { id: 4, nameKey: "ironP",    cost: 5000,   power: 35,  purchased: false, passiveReq: 5 },
+    { id: 5, nameKey: "diamondP", cost: 25000,  power: 100, purchased: false, passiveReq: 7 },
+    { id: 6, nameKey: "netherP",  cost: 55000,  power: 250, purchased: false, passiveReq: 8 },
+    { id: 7, nameKey: "endP",     cost: 150000, power: 500, purchased: false, passiveReq: 10 }
+];
+
+/* =========================================================
+   ПАССИВНЫЙ ДОХОД
+========================================================= */
+const passives = [
+    { id: 1,  nameKey: "rod1",   cost: 30,    basePps: 2,   count: 0, unlockReq: null },
+    { id: 2,  nameKey: "rod2",   cost: 100,   basePps: 3,   count: 0, unlockReq: 1 },
+    { id: 3,  nameKey: "rod3",   cost: 250,   basePps: 4,   count: 0, unlockReq: 2 },
+    { id: 4,  nameKey: "rod4",   cost: 500,   basePps: 5,   count: 0, unlockReq: 3 },
+    { id: 5,  nameKey: "golem1", cost: 1000,  basePps: 7,   count: 0, unlockReq: 4 },
+    { id: 6,  nameKey: "golem2", cost: 3000,  basePps: 9,   count: 0, unlockReq: 5 },
+    { id: 7,  nameKey: "golem3", cost: 10000, basePps: 15,  count: 0, unlockReq: 6 },
+    { id: 8,  nameKey: "golem4", cost: 30000, basePps: 20,  count: 0, unlockReq: 7 },
+    { id: 9,  nameKey: "golem5", cost: 70000, basePps: 50,  count: 0, unlockReq: 8 },
+    { id: 10, nameKey: "golem6", cost: 100000,basePps: 150, count: 0, unlockReq: 9 }
+];
+
+/* =========================================================
+   УПРАВЛЕНИЕ МЕНЮ (мобильная адаптация)
+========================================================= */
+function toggleMenu() {
+    const menu = document.getElementById('left-menu');
+    const overlay = document.getElementById('menu-overlay');
+
+    if (menu.classList.contains('collapsed')) {
+        // Открываем
+        menu.classList.remove('collapsed');
+        if (isMobile) overlay.classList.add('show');
+        hideMenuBadge();
+    } else {
+        // Закрываем
+        menu.classList.add('collapsed');
+        overlay.classList.remove('show');
+    }
+    syncCrazyGameplay();
+}
+
+function closeMenu() {
+    const menu = document.getElementById('left-menu');
+    const overlay = document.getElementById('menu-overlay');
+    menu.classList.add('collapsed');
+    overlay.classList.remove('show');
+    syncCrazyGameplay();
+}
+
+function showMenuBadge() {
+    const badge = document.getElementById('menu-badge');
+    badge.classList.add('show');
+    badge.innerText = '!';
+}
+
+function hideMenuBadge() {
+    document.getElementById('menu-badge').classList.remove('show');
+}
+
+// При старте: если мобильный — меню свёрнуто
+function initMenuState() {
+    const menu = document.getElementById('left-menu');
+    if (window.innerWidth <= 768) {
+        menu.classList.add('collapsed');
+        isMobile = true;
+    } else {
+        menu.classList.remove('collapsed');
+        isMobile = false;
+    }
+}
+
+// Отслеживаем изменение размера окна
+window.addEventListener('resize', () => {
+    const nowMobile = window.innerWidth <= 768;
+    if (nowMobile !== isMobile) {
+        isMobile = nowMobile;
+        initMenuState();
+        syncCrazyGameplay();
+    }
+});
+
+// Свайп влево по меню — закрывает его
+let touchStartX = 0;
+let touchStartY = 0;
+document.getElementById('left-menu').addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.getElementById('left-menu').addEventListener('touchmove', (e) => {
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = Math.abs(e.touches[0].clientY - touchStartY);
+    // Свайп влево, если по горизонтали больше чем по вертикали
+    if (dx < -50 && dy < 60) {
+        closeMenu();
+    }
+}, { passive: true });
+
+/* =========================================================
+   CRAZYGAMES SDK V3
+   В самой платформе используем только SDK.data; локальный fallback
+   предназначен исключительно для отдельного запуска без SDK.
+========================================================= */
+function crazyCallGame(method, ...args) {
+    if (!crazyReady || !crazySDK?.game || typeof crazySDK.game[method] !== 'function') return;
+    try { crazySDK.game[method](...args); }
+    catch (e) { console.warn('CrazyGames game event failed:', method, e); }
+}
+function syncCrazyGameplay() {
+    if (!crazyReady) return;
+    const modal = document.getElementById('prestige-modal');
+    // На десктопе магазин расположен рядом с игровой зоной; на телефоне перекрывает её.
+    const mobileMenuOpen = isMobile && !document.getElementById('left-menu').classList.contains('collapsed');
+    const canPlay = !gameLoading && !crazyAdBusy && !modal.classList.contains('show') && !mobileMenuOpen;
+    if (canPlay === crazyGameplayRunning) return;
+    crazyGameplayRunning = canPlay;
+    crazyCallGame(canPlay ? 'gameplayStart' : 'gameplayStop');
+}
+function reportCrazyProgress() {
+    crazyHighestLevel = Math.max(crazyHighestLevel, currentLevel);
+    if (!crazyReady) return;
+    const percent = Math.min(100, Math.max(0, Math.round((crazyHighestLevel - 1) / (levels.length - 1) * 100)));
+    if (crazyLastProgress !== percent) {
+        crazyLastProgress = percent;
+        crazyCallGame('reportGameCompletedPercentage', percent);
+    }
+    crazyCallGame('setGameContext', { level: String(currentLevel), prestiges: String(prestigeCount) });
+}
+function syncCrazyAudioSettings(settings) {
+    // Mute платформы важнее пользовательской кнопки звука.
+    window._crazyForcedMuted = !!settings?.muteAudio;
+    if (window._crazyForcedMuted) {
+        try { audioCtx.suspend(); } catch (e) {}
+    } else if (!crazyAdPlaying && soundEnabled) {
+        // Возобновляется только после пользовательского жеста.
+        if (navigator.userActivation?.hasBeenActive !== false) {
+            try { audioCtx.resume(); } catch (e) {}
+        }
+    }
+}
+function onAudioGesture() {
+    if (!window._crazyForcedMuted && !crazyAdPlaying && soundEnabled && audioCtx.state === 'suspended') {
+        try { audioCtx.resume(); } catch (e) {}
+    }
+}
+document.addEventListener('pointerdown', onAudioGesture, {passive: true});
+document.addEventListener('touchend', onAudioGesture, {passive: true});
+
+/* =========================================================
+   V10.3: уведомления и защита сохранений
+   CrazyGames SDK Data Module сам синхронизирует данные гостя / аккаунта.
+   Важно: не перезаписывать состояние другой сессии или другого аккаунта.
+========================================================= */
+function describeSaveIssue(type) {
+    const ru = currentLang === 'ru';
+    const messages = {
+        read: ru
+            ? ['Не удалось загрузить сохранение', 'Не записываем новый прогресс поверх возможного облачного сохранения. Проверь соединение и перезагрузи игру.', 'Перезагрузить']
+            : ['Could not load your save', 'New progress is not being written over a potentially existing cloud save. Check your connection and reload the game.', 'Reload'],
+        write: ru
+            ? ['Прогресс не сохранился', 'Последние изменения ещё не записаны в CrazyGames. Проверь интернет и попробуй ещё раз.', 'Повторить запись']
+            : ['Progress was not saved', 'Recent changes were not stored in CrazyGames. Check your connection and try again.', 'Retry save'],
+        conflict: ru
+            ? ['Найдено другое сохранение', 'Данные были изменены в другой вкладке или на другом устройстве. Мы остановили запись, чтобы не затереть новый прогресс. Перезагрузи игру.', 'Загрузить актуальное']
+            : ['Another save was detected', 'Progress changed in another tab or device. Saving is paused to protect newer progress. Reload to load the latest available save.', 'Load latest'],
+        auth: ru
+            ? ['Переключаем аккаунт', 'Сохранение приостановлено. Игра перезагрузится и загрузит данные выбранного профиля CrazyGames.', '']
+            : ['Switching accounts', 'Saving is paused. The game will reload to load the selected CrazyGames profile.', ''],
+        offline: ru
+            ? ['Облако CrazyGames недоступно', 'Игра работает с локальным сохранением. Облачная синхронизация сейчас не работает.', 'Повторить подключение']
+            : ['CrazyGames cloud is unavailable', 'The game is using local saves only. Cloud synchronization is currently unavailable.', 'Reconnect']
+    };
+    return messages[type] || messages.write;
+}
+function refreshSaveWarning() {
+    const el = document.getElementById('save-warning');
+    if (!el) return;
+    const type = crazySaveIssue;
+    el.classList.toggle('show', !!type);
+    if (!type) return;
+    const [title, message, action] = describeSaveIssue(type);
+    document.getElementById('save-warning-title').textContent = title;
+    document.getElementById('save-warning-message').textContent = message;
+    const button = document.getElementById('save-retry');
+    button.textContent = action;
+    button.style.display = action ? 'inline-block' : 'none';
+}
+function setSaveIssue(type) {
+    if (crazySaveIssue === type) return;
+    crazySaveIssue = type;
+    refreshSaveWarning();
+}
+function retryCrazySave() {
+    if (crazySaveIssue === 'write' && !crazyAccountChangePending) {
+        saveGameState();
+    } else if (crazySaveIssue === 'read' || crazySaveIssue === 'conflict' || crazySaveIssue === 'offline') {
+        window.location.reload();
+    }
+}
+function onCrazyAuthChange(user) {
+    if (!crazyReady || gameLoading || crazyAccountChangePending) return;
+    // SDK может переключить хранилище с гостевого на другой аккаунт.
+    // Нельзя записывать старые игровые данные в новый профиль.
+    crazyAccountChangePending = true;
+    crazyDataReady = false;
+    setSaveIssue('auth');
+    console.info('CrazyGames account changed; pausing saves before loading the profile.');
+    // SDK сам синхронизирует гостевой прогресс. Даём ему время на переключение
+    // и запускаем игру заново, чтобы чтение произошло уже из нового профиля.
+    setTimeout(() => { window.location.reload(); }, 1200);
+}
+function registerCrazyAuthListener() {
+    if (typeof crazySDK?.user?.addAuthListener !== 'function') return;
+    crazyAuthListener = onCrazyAuthChange;
+    try { crazySDK.user.addAuthListener(crazyAuthListener); }
+    catch (e) { console.warn('CrazyGames auth listener unavailable:', e); }
+}
+
+async function initCrazyGamesSDK() {
+    let localFallback = false;
+    try {
+        if (!window.CrazyGames?.SDK) throw new Error('CrazyGames SDK script unavailable');
+        const sdk = window.CrazyGames.SDK;
+        await sdk.init();
+        const environment = sdk.environment;
+        if (environment === 'disabled') throw new Error('SDK disabled on this host');
+        crazySDK = sdk;
+        crazyReady = true;
+        crazyAdsAllowed = !!sdk.ad?.requestAd;
+        crazyCallGame('loadingStart');
+
+        // CrazyGames Data Module: для гостей и пользователей с аккаунтами.
+        // Не начинаем запись, если начальное чтение дало ошибку / повреждённый JSON.
+        try {
+            if (typeof sdk.data?.getItem !== 'function' || typeof sdk.data?.setItem !== 'function') {
+                throw new Error('CrazyGames Data Module methods unavailable');
+            }
+            const raw = sdk.data.getItem(CRAZY_SAVE_KEY);
+            const state = raw === null ? null : JSON.parse(raw);
+            if (state !== null && (!state || typeof state !== 'object' || Array.isArray(state))) {
+                throw new Error('Invalid save format');
+            }
+            crazySaveBaselineRaw = raw;
+            crazySaveRevision = state ? Math.floor(safeNum(state.saveMeta?.revision)) : 0;
+            if (state) loadGameState(state);
+            crazyDataReady = true;
+        } catch (error) {
+            crazyDataReady = false;
+            setSaveIssue('read');
+            console.error('CrazyGames Data Module unavailable / save is invalid. Enable Progress Save in Developer Portal:', error);
+        }
+        registerCrazyAuthListener();
+        syncCrazyAudioSettings(sdk.game?.settings);
+        if (typeof sdk.game?.addSettingsChangeListener === 'function') {
+            sdk.game.addSettingsChangeListener(syncCrazyAudioSettings);
+        }
+    } catch (error) {
+        // Отдельный запуск вне CrazyGames (localhost / file / сторонний домен),
+        // если официальный SDK недоступен. Данные в облако не отправляются.
+        console.info('CrazyGames SDK not available, offline development mode:', error);
+        crazyReady = false;
+        crazyAdsAllowed = false;
+        localFallback = true;
+    } finally {
+        if (localFallback) {
+            crazyUsingOfflineStorage = true;
+            const saved = loadOfflineGame();
+            if (saved) loadGameState(saved);
+            // Локальный режим предназначен для разработки; на CrazyGames
+            // показываем предупреждение о том, что облако недоступно.
+            if (/crazygames/i.test(window.location.hostname)) setSaveIssue('offline');
+        }
+        gameLoading = false;
+        applyLanguage();
+        updateUI();
+        updateBackground();
+        refreshRewardOffer();
+        document.getElementById('platform-loading').style.display = 'none';
+        if (crazyReady) {
+            crazyCallGame('loadingStop');
+            reportCrazyProgress();
+            syncCrazyGameplay();
+        }
+        if (crazyUsingOfflineStorage) saveGameState();
+    }
+}
+
+/* =========================================================
+   СОХРАНЕНИЕ
+========================================================= */
+function getGameState() {
+    return {
+        saveVersion: 11,
+        resources: Math.floor(resources * 1000) / 1000,
+        totalExp: totalExp,
+        currentLevel: currentLevel,
+        pickaxes: pickaxes.map(p => ({ id: p.id, purchased: p.purchased })),
+        passives: passives.map(p => ({ id: p.id, count: p.count })),
+        soundEnabled: soundEnabled, lang: currentLang,
+        cycleEarned, allTimeEarned, totalClicks, prestigeCount, crystals,
+        prestigeUpgrades: { ...prestigeUpgrades }, enchants: { ...enchants },
+        petsOwned: JSON.parse(JSON.stringify(petsOwned)),
+        petDisplayMigrationApplied: true,
+        achievementClaims: { ...achievementClaims },
+        achievementUnlocked: { ...achievementUnlocked },
+        cyclePickaxesBought, enchantUpgradesBought,
+        distinctPetsBought: { ...distinctPetsBought },
+        crazyHighestLevel
+    };
+}
+function safeNum(v, fallback = 0) { return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : fallback; }
+function loadGameState(state) {
+    if (!state || typeof state !== 'object') return;
+    resources = safeNum(state.resources);
+    totalExp = safeNum(state.totalExp);
+    currentLevel = Math.min(levels.length, Math.max(1, Math.floor(safeNum(state.currentLevel, 1))));
+    crazyHighestLevel = Math.min(levels.length, Math.max(currentLevel, Math.floor(safeNum(state.crazyHighestLevel, currentLevel))));
+    if (Array.isArray(state.pickaxes)) {
+        state.pickaxes.forEach(sp => {
+            const p = pickaxes.find(x => x.id === sp.id);
+            if (p) p.purchased = p.id === 0 ? true : !!sp.purchased;
+        });
+    }
+    if (Array.isArray(state.passives)) {
+        state.passives.forEach(sp => {
+            const p = passives.find(x => x.id === sp.id);
+            if (p) p.count = Math.floor(safeNum(sp.count));
+        });
+    }
+    // Сохранения V6 не имели новых полей. Все старые покупки остаются.
+    const legacyMinimumEarned = levels.slice(0, currentLevel-1).reduce((sum,l)=>sum+l.expMax,0) + (currentLevel===levels.length ? 0 : totalExp);
+    cycleEarned = safeNum(state.cycleEarned, legacyMinimumEarned);
+    allTimeEarned = safeNum(state.allTimeEarned, legacyMinimumEarned);
+    totalClicks = Math.floor(safeNum(state.totalClicks));
+    prestigeCount = Math.floor(safeNum(state.prestigeCount));
+    crystals = Math.floor(safeNum(state.crystals));
+    ['click','passive'].forEach(id => {
+        prestigeUpgrades[id] = Math.min(4, Math.floor(safeNum(state.prestigeUpgrades?.[id])));
+    });
+    enchantDefs.forEach(d => { enchants[d.id] = Math.min(5, Math.floor(safeNum(state.enchants?.[d.id]))); });
+    petDefs.forEach(d => {
+        const pet = state.petsOwned?.[d.id];
+        if (pet && typeof pet === 'object') petsOwned[d.id] = { level: Math.min(3, Math.max(1, Math.floor(safeNum(pet.level, 1)))), active: !!pet.active };
+    });
+    achievementClaims = {};
+    achievementUnlocked = {};
+    achievements.forEach(a => {
+        if (state.achievementClaims?.[a.id]) achievementClaims[a.id] = true;
+        if (state.achievementUnlocked?.[a.id] || achievementClaims[a.id]) achievementUnlocked[a.id] = true;
+    });
+    cyclePickaxesBought = Math.floor(safeNum(state.cyclePickaxesBought, pickaxes.filter(p => p.id && p.purchased).length));
+    enchantUpgradesBought = Math.floor(safeNum(state.enchantUpgradesBought));
+    distinctPetsBought = {};
+    petDefs.forEach(d => { if (state.distinctPetsBought?.[d.id]) distinctPetsBought[d.id] = true; });
+    // Для совместимости со старым прогрессом не начисляем ретроактивно кристаллы.
+    if (state.soundEnabled !== undefined) soundEnabled = !!state.soundEnabled;
+    if (state.lang === 'en' || state.lang === 'ru') currentLang = state.lang;
+    refreshGameSettingButtons();
+    enforcePetSlots();
+    // Обновление V10.2: в старых сохранениях второй питомец мог остаться
+    // неактивным из-за прежнего ограничения до 8-го уровня. Один раз
+    // автоматически заполняем свободный слот без повторных списаний.
+    if (!state.petDisplayMigrationApplied && currentLevel >= 4) {
+        for (const def of petDefs) {
+            if (activePetsCount() >= petSlots()) break;
+            if (petsOwned[def.id] && !petsOwned[def.id].active) petsOwned[def.id].active = true;
+        }
+    }
+    petDisplayMigrationApplied = true;
+    checkAchievementUnlocks();
+    applyLanguage();
+}
+function saveOfflineGame() {
+    if (!crazyUsingOfflineStorage || gameLoading) return;
+    try { localStorage.setItem(OFFLINE_SAVE_KEY, JSON.stringify(getGameState())); }
+    catch (e) { console.warn('Offline save failed:', e); }
+}
+function loadOfflineGame() {
+    try {
+        const raw = localStorage.getItem(OFFLINE_SAVE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (error) { return null; }
+}
+function saveGameState() {
+    if (gameLoading || crazyAccountChangePending) return;
+    if (crazyUsingOfflineStorage) { saveOfflineGame(); return; }
+    if (!crazyReady || !crazyDataReady || crazySaveIssue === 'conflict') return;
+    try {
+        // Защита от конфликтов в нескольких вкладках: сначала сверяем
+        // текущее значение в Data Module с последней известной нам версией.
+        // Это не атомарная транзакция между устройствами, но предотвращает
+        // перезапись уже появившегося нового прогресса при следующем сохранении.
+        const currentRaw = crazySDK.data.getItem(CRAZY_SAVE_KEY);
+        if (currentRaw !== crazySaveBaselineRaw) {
+            crazyDataReady = false;
+            setSaveIssue('conflict');
+            console.warn('CrazyGames save changed outside this game session; refusing to overwrite it.');
+            return;
+        }
+        const state = getGameState();
+        state.saveMeta = { revision: crazySaveRevision + 1, savedAt: Date.now() };
+        const nextRaw = JSON.stringify(state);
+        crazySDK.data.setItem(CRAZY_SAVE_KEY, nextRaw);
+        crazySaveBaselineRaw = nextRaw;
+        crazySaveRevision++;
+        if (crazySaveIssue === 'write') setSaveIssue(null);
+    } catch (e) {
+        // Не переключаемся на localStorage внутри CrazyGames: это привело бы
+        // к несогласованным, не синхронизирующимся сохранениям.
+        console.error('CrazyGames save failed:', e);
+        setSaveIssue('write');
+    }
+}
+setInterval(saveGameState, 30000);
+window.addEventListener('pagehide', saveGameState);
+window.addEventListener('beforeunload', saveGameState);
+
+/* =========================================================
+   АУДИО
+========================================================= */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playTone(freq, type, duration, volume = 0.1, delay = 0) {
+    if (!soundEnabled || window._adMuted || window._crazyForcedMuted) return;
+    try {
+        const start = audioCtx.currentTime + delay;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(volume, start);
+        gain.gain.exponentialRampToValueAtTime(0.00001, start + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(start);
+        osc.stop(start + duration);
+    } catch (e) { /* ignore */ }
+}
+
+function playHitSound()  { playTone(140, 'triangle', 0.08, 0.15); }
+function playCritSound() { playTone(900, 'sawtooth', 0.15, 0.2); playTone(1400, 'sine', 0.2, 0.15); }
+function playBuySound()  { playTone(550, 'sine', 0.08); playTone(850, 'sine', 0.12, 0.1, 0.06); }
+function playBoostSound(){ playTone(400, 'square', 0.08); playTone(600, 'square', 0.08, 0.1, 0.08); playTone(1200, 'square', 0.2, 0.1, 0.16); }
+
+function playLevelUpSound() {
+    playTone(587.33, 'sine', 0.35, 0.18, 0);
+    playTone(880.00, 'sine', 0.55, 0.18, 0.18);
+    playTone(587.33, 'sine', 0.35, 0.06, 0.35);
+    playTone(880.00, 'sine', 0.55, 0.06, 0.53);
+}
+
+/* =========================================================
+   ХЕЛПЕРЫ
+========================================================= */
+function getPassiveById(id) { return passives.find(p => p.id === id); }
+function hasPassive(id) {
+    const p = getPassiveById(id);
+    return p && p.count > 0;
+}
+function getPickaxesPower() {
+    return pickaxes.reduce((sum, p) => sum + (p.purchased ? p.power : 0), 0);
+}
+function getActivePetBonus(type) {
+    return petDefs.reduce((sum,d) => {
+        const pet=petsOwned[d.id];
+        if (!pet?.active) return sum;
+        return sum + d[type] * (1 + (pet.level-1)*.5);
+    },0);
+}
+function getClickPower() {
+    const base = getPickaxesPower() + levels[currentLevel - 1].bonus;
+    return base * (1 + enchants.efficiency*.10 + getActivePetBonus('click')) * (1 + prestigeUpgrades.click*.10);
+}
+function getPassiveIncome() {
+    const base = passives.reduce((sum,p)=>sum + p.basePps*p.count,0);
+    return base * (1 + enchants.automation*.10 + getActivePetBonus('passive')) * (1 + prestigeUpgrades.passive*.10);
+}
+function getCritChance() { return CRIT_CHANCE + enchants.luck * .02; }
+function recordMined(amount) {
+    cycleEarned += amount;
+    allTimeEarned += amount;
+    resources += amount;
+    addExp(amount);
+    checkAchievementUnlocks();
+}
+function getPassiveCost(p) {
+    return Math.floor(p.cost * Math.pow(1.3, p.count));
+}
+
+/* =========================================================
+   ПРОВЕРКА УСЛОВИЙ ПОКУПКИ
+========================================================= */
+function canBuyPickaxe(p, index) {
+    if (p.purchased) return { ok: false, reason: "bought" };
+
+    const prev = pickaxes[index - 1];
+    if (prev && !prev.purchased) {
+        return { ok: false, reason: "prev", itemNameKey: prev.nameKey };
+    }
+    if (p.passiveReq !== null && !hasPassive(p.passiveReq)) {
+        const passive = getPassiveById(p.passiveReq);
+        return { ok: false, reason: "passive", itemNameKey: passive.nameKey };
+    }
+    if (resources < p.cost) return { ok: false, reason: "money" };
+    return { ok: true };
+}
+
+function canBuyPassive(p) {
+    if (p.unlockReq !== null && !hasPassive(p.unlockReq)) {
+        const prev = getPassiveById(p.unlockReq);
+        return { ok: false, reason: "passive", itemNameKey: prev.nameKey };
+    }
+    const price = getPassiveCost(p);
+    if (resources < price) return { ok: false, reason: "money" };
+    return { ok: true };
+}
+
+/* =========================================================
+   ФОН ПО УРОВНЮ
+========================================================= */
+function updateBackground() {
+    let bg = 'bg.jpg';
+    if (currentLevel === 8)       bg = 'bg2.jpg';
+    else if (currentLevel === 9)  bg = 'bg3.jpg';
+    else if (currentLevel === 10) bg = 'bg4.jpg';
+    else if (currentLevel >= 11)  bg = 'bg5.jpg';
+    document.getElementById('bg-overlay').style.backgroundImage = `url('${bg}')`;
+}
+
+/* =========================================================
+   ОПЫТ = РЕСУРСЫ
+========================================================= */
+function addExp(amount) {
+    if (amount <= 0) return;
+    if (currentLevel >= levels.length) return;
+
+    totalExp += amount;
+    let req = levels[currentLevel - 1].expMax;
+    while (totalExp >= req && currentLevel < levels.length) {
+        totalExp -= req;
+        currentLevel++;
+        checkAchievementUnlocks();
+        updateBackground();
+        playLevelUpSound();
+        showLevelUpFlash();
+
+        // Межстраничная реклама не запускается во время ручной/пассивной добычи.
+        // CrazyGames midgame размещён на экране перерождения (между циклами).
+        reportCrazyProgress();
+        req = levels[currentLevel - 1] ? levels[currentLevel - 1].expMax : Infinity;
+    }
+    if (currentLevel >= levels.length) totalExp = 0;
+}
+
+/* =========================================================
+   КЛИК ПО ИЗУМРУДУ
+========================================================= */
+const CRIT_CHANCE = 0.05;
+const CRIT_MULT   = 3;
+
+function clickEmerald(e) {
+    e.preventDefault();
+    if (gameLoading || crazyAdBusy) return;
+
+    const basePower = getClickPower();
+    const isCrit = Math.random() < getCritChance();
+
+    let gained = basePower * boostMultiplier;
+    if (isCrit) gained *= CRIT_MULT;
+    gained = Math.floor(gained);
+
+    totalClicks++;
+    recordMined(gained);
+
+    if (isCrit) playCritSound(); else playHitSound();
+    spawnParticles(e, `+${gained}`, isCrit);
+    updateUI();
+}
+
+/* =========================================================
+   ВСПЫШКА ПРИ УРОВНЕ
+========================================================= */
+function showLevelUpFlash() {
+    const f = document.getElementById('levelup-flash');
+    f.classList.remove('show');
+    void f.offsetWidth;
+    f.classList.add('show');
+}
+
+/* =========================================================
+   ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
+========================================================= */
+function updateUI() {
+    const t = langData[currentLang];
+
+    updateIfChanged(document.getElementById('resource-number'), fmt(resources));
+    updateIfChanged(document.getElementById('pps-count'), `${t.pps}${fmt(getPassiveIncome())}/sec`);
+    updateIfChanged(document.getElementById('prestige-mini'), prestigeCount || crystals ? `✦ ${fmt(crystals)} · ${t.prestigeCount}: ${prestigeCount}` : '');
+
+    const lvlConfig = levels[currentLevel - 1];
+    const lvlName = currentLang === 'ru' ? lvlConfig.nameRu : lvlConfig.nameEn;
+    document.getElementById('level-info').innerText = `${t.lvl}${currentLevel}: ${lvlName}`;
+
+    let expPercent = 0;
+    if (currentLevel >= levels.length) {
+        expPercent = 100;
+    } else {
+        expPercent = Math.min((totalExp / lvlConfig.expMax) * 100, 100);
+    }
+    document.getElementById('exp-bar').style.width = `${expPercent}%`;
+    document.getElementById('exp-text').innerText = `${Math.floor(expPercent)}%`;
+
+    renderShop();
+    renderFeatures();
+    updatePetCompanions();
+    checkAffordableItems();
+}
+
+/* =========================================================
+   ИНДИКАТОР "ЕСТЬ ЧТО КУПИТЬ" НА КНОПКЕ МЕНЮ
+========================================================= */
+function checkAffordableItems() {
+    // Проверяем, есть ли доступные покупки
+    let hasAffordable = false;
+
+    pickaxes.forEach((p, i) => {
+        if (hasAffordable) return;
+        const check = canBuyPickaxe(p, i);
+        if (check.ok) hasAffordable = true;
+    });
+
+    passives.forEach(p => {
+        if (hasAffordable) return;
+        const check = canBuyPassive(p);
+        if (check.ok) hasAffordable = true;
+    });
+
+    const menu = document.getElementById('left-menu');
+    // Показываем бейдж, только если меню свёрнуто
+    if (hasAffordable && menu.classList.contains('collapsed')) {
+        showMenuBadge();
+    } else if (!hasAffordable) {
+        hideMenuBadge();
+    }
+}
+
+/* =========================================================
+   РЕНДЕР МАГАЗИНА
+   Карточки создаются один раз: повторный updateUI() меняет только текст
+   и состояние кнопок. Это предотвращает потерю клика на телефоне.
+========================================================= */
+function getOrCreateShopItem(container, itemId, onBuy) {
+    let item = document.getElementById(itemId);
+    if (!item) {
+        item = document.createElement('div');
+        item.id = itemId;
+        item.className = 'shop-item';
+
+        const top = document.createElement('div');
+        top.className = 'item-top';
+        const icon = document.createElement('div');
+        icon.className = 'item-icon';
+        const mainWrap = document.createElement('div');
+        mainWrap.className = 'item-main';
+        const title = document.createElement('div');
+        title.className = 'title';
+        const desc = document.createElement('div');
+        desc.className = 'desc';
+        const lockReason = document.createElement('div');
+        lockReason.className = 'lock-reason';
+        lockReason.style.display = 'none';
+        mainWrap.append(title, desc, lockReason);
+        top.append(icon, mainWrap);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'buy-btn';
+        button.addEventListener('click', onBuy);
+
+        item.append(top, button);
+        container.appendChild(item);
+    }
+    return item;
+}
+
+function updateShopItem(item, className, icon, title, description, reason, label, enabled) {
+    item.className = className;
+    const iconEl = item.querySelector('.item-icon');
+    const titleEl = item.querySelector('.title');
+    const descEl = item.querySelector('.desc');
+    const reasonEl = item.querySelector('.lock-reason');
+    const button = item.querySelector('.buy-btn');
+
+    if (iconEl.textContent !== icon) iconEl.textContent = icon;
+    if (titleEl.textContent !== title) titleEl.textContent = title;
+    if (descEl.textContent !== description) descEl.textContent = description;
+    if (reasonEl.textContent !== reason) reasonEl.textContent = reason;
+    reasonEl.style.display = reason ? '' : 'none';
+    if (button.textContent !== label) button.textContent = label;
+    button.disabled = !enabled;
+}
+
+function renderShop() {
+    const t = langData[currentLang];
+    const pickContainer = document.getElementById('list-pickaxes');
+
+    pickaxes.forEach((p, index) => {
+        if (p.id === 0) return;
+        const check = canBuyPickaxe(p, index);
+        const item = getOrCreateShopItem(
+            pickContainer, `shop-pickaxe-${p.id}`, () => buyPickaxe(p.id)
+        );
+        const itemClass = 'shop-item' +
+            (p.purchased ? ' bought' : !check.ok && check.reason !== 'money' ? ' locked' : '');
+        let reason = '';
+        if (!p.purchased && check.reason === 'prev') {
+            reason = `${t.needPrev}${t[check.itemNameKey]}`;
+        } else if (!p.purchased && check.reason === 'passive') {
+            reason = `${t.needPassive}${t[check.itemNameKey]}`;
+        }
+        updateShopItem(
+            item, itemClass, getShopItemIcon(p.nameKey), t[p.nameKey], `+${p.power} ${t.perClick}`,
+            reason, p.purchased ? t.max : `${t.buy} (${fmt(p.cost)})`, check.ok
+        );
+    });
+
+    const passContainer = document.getElementById('list-passives');
+    passives.forEach(p => {
+        const check = canBuyPassive(p);
+        const price = getPassiveCost(p);
+        const item = getOrCreateShopItem(
+            passContainer, `shop-passive-${p.id}`, () => buyPassive(p.id)
+        );
+        const itemClass = 'shop-item' +
+            (!check.ok && check.reason !== 'money' ? ' locked' : '');
+        const reason = check.reason === 'passive'
+            ? `${t.needPassive}${t[check.itemNameKey]}` : '';
+        updateShopItem(
+            item, itemClass, getShopItemIcon(p.nameKey), `${t[p.nameKey]} [${p.count}]`,
+            `+${p.basePps} ${t.perSec}`, reason, `${t.buy} (${fmt(price)})`, check.ok
+        );
+    });
+    refreshRewardOffer();
+}
+
+/* =========================================================
+   ПОКУПКИ
+   Нет искусственной задержки: проверка условий и списание выполняются
+   синхронно, поэтому купленная кирка не купится повторно.
+========================================================= */
+function buyPickaxe(id) {
+    if (gameLoading || crazyAdBusy) return;
+    const index = pickaxes.findIndex(x => x.id === id);
+    if (index < 0) return;
+    const p = pickaxes[index];
+    if (!canBuyPickaxe(p, index).ok) return;
+
+    resources -= p.cost;
+    p.purchased = true;
+    cyclePickaxesBought++;
+    checkAchievementUnlocks();
+    playBuySound();
+    updateUI();
+    saveGameState();
+}
+
+function buyPassive(id) {
+    if (gameLoading || crazyAdBusy) return;
+    const p = getPassiveById(id);
+    if (!p || !canBuyPassive(p).ok) return;
+
+    const price = getPassiveCost(p);
+    resources -= price;
+    p.count++;
+    playBuySound();
+    updateUI();
+    saveGameState();
+}
+
+/* =========================================================
+   ЧАРЫ, ПИТОМЦЫ, ПРЕСТИЖ, ДОСТИЖЕНИЯ
+   Все карточки постоянные: изменение текста не разрушает кнопки.
+========================================================= */
+function buildFeatureCard(containerId, id, onMain, onExtra) {
+    const container = document.getElementById(containerId);
+    let card = document.getElementById(id);
+    if (card) return card;
+    card = document.createElement('div');
+    card.id = id; card.className = 'shop-item';
+    const top = document.createElement('div'); top.className = 'item-top';
+    const icon = document.createElement('div'); icon.className = 'item-icon';
+    const mainWrap = document.createElement('div'); mainWrap.className = 'item-main';
+    const title = document.createElement('div'); title.className = 'title';
+    const desc = document.createElement('div'); desc.className = 'desc';
+    const status = document.createElement('div'); status.className = 'lock-reason';
+    mainWrap.append(title, desc, status); top.append(icon, mainWrap);
+    const main = document.createElement('button'); main.type = 'button'; main.className = 'buy-btn';
+    main.addEventListener('click', onMain);
+    card.append(top, main);
+    if (onExtra) {
+        const extra = document.createElement('button'); extra.type = 'button'; extra.className = 'sub-btn';
+        extra.addEventListener('click', onExtra); card.appendChild(extra);
+    }
+    container.appendChild(card);
+    return card;
+}
+function updateFeatureCard(card,{icon='📦',title,desc,status='',main,canMain=false,extra='',canExtra=false,completed=false}) {
+    const iconEl = card.querySelector('.item-icon');
+    if (typeof icon === 'string' && icon.startsWith('pet:')) {
+        const petId = icon.slice(4);
+        if (iconEl.dataset.petId !== petId) {
+            iconEl.replaceChildren();
+            const img = document.createElement('img');
+            img.className = 'pet-item-img';
+            img.src = PET_SPRITES[petId];
+            img.alt = '';
+            img.draggable = false;
+            iconEl.appendChild(img);
+            iconEl.dataset.petId = petId;
+        }
+    } else {
+        if (iconEl.dataset.petId) delete iconEl.dataset.petId;
+        updateIfChanged(iconEl, icon);
+    }
+    updateIfChanged(card.querySelector('.title'), title);
+    updateIfChanged(card.querySelector('.desc'), desc);
+    updateIfChanged(card.querySelector('.lock-reason'), status);
+    card.querySelector('.lock-reason').style.display = status ? '' : 'none';
+    const mainButton = card.querySelector('.buy-btn');
+    updateIfChanged(mainButton, main); mainButton.disabled = !canMain;
+    const extraButton = card.querySelector('.sub-btn');
+    if (extraButton) { updateIfChanged(extraButton, extra); extraButton.disabled = !canExtra; }
+    card.className = 'shop-item' + (completed ? ' bought' : '');
+}
+function updateFeatureSummary(containerId, id, text) {
+    const container = document.getElementById(containerId);
+    let el = document.getElementById(id);
+    if (!el) { el = document.createElement('div'); el.id = id; el.className = 'feature-summary'; container.prepend(el); }
+    updateIfChanged(el, text);
+}
+function buyEnchant(id) {
+    if (gameLoading || crazyAdBusy) return;
+    const def = enchantDefs.find(d=>d.id===id);
+    if (!def || currentLevel < def.unlock || enchants[id]>=5) return;
+    const price = def.costs[enchants[id]];
+    if (resources + 1e-7 < price) return;
+    resources -= price;
+    enchants[id]++;
+    enchantUpgradesBought++;
+    checkAchievementUnlocks();
+    playBuySound(); updateUI(); saveGameState();
+}
+function renderEnchants() {
+    const t=langData[currentLang];
+    updateFeatureSummary('list-enchants','enchant-summary', t.enchantHelp + (currentLevel<3 ? ' '+t.requiresLevel+'3.' : ''));
+    enchantDefs.forEach(d=>{
+        const level=enchants[d.id], maxed=level>=5;
+        const price=maxed?0:d.costs[level];
+        const label=localized(d.titleRu,d.titleEn);
+        const bonus=d.id==='luck' ? `${Math.round((CRIT_CHANCE + level*.02)*100)}%` : `+${level*10}%`;
+        const effect=d.id==='efficiency'?t.clickBonus:d.id==='automation'?t.passiveBonus:t.chanceCrit;
+        const card=buildFeatureCard('list-enchants','enchant-'+d.id,()=>buyEnchant(d.id));
+        updateFeatureCard(card,{
+            icon: enchantIcons[d.id] || '✨',
+            title:label+' · '+t.tier+' '+level+'/5',
+            desc:effect+': '+bonus,
+            status:currentLevel<d.unlock?t.requiresLevel+d.unlock:'',
+            main:maxed?t.maxLevel:`${t.improve} (${fmt(price)})`,
+            canMain:!maxed && currentLevel>=d.unlock && resources+1e-7>=price,
+            completed:maxed
+        });
+    });
+}
+/* Каждый купленный питомец виден на поле; бонусы дают только активные (до 2). */
+let displayedPetsKey = '';
+function updatePetCompanions(force = false) {
+    const host = document.getElementById('pet-companions');
+    if (!host) return;
+    const owned = petDefs.filter(d => !!petsOwned[d.id]);
+    const key = currentLang + '|' + owned.map(d => d.id + ':' + petsOwned[d.id].level + ':' + Number(petsOwned[d.id].active)).join('|');
+    if (!force && key === displayedPetsKey) return;
+    displayedPetsKey = key;
+    host.replaceChildren();
+    owned.forEach((d, index) => {
+        const pet = petsOwned[d.id];
+        const card = document.createElement('div');
+        card.className = 'pet-companion' + (pet.active ? '' : ' inactive');
+        card.dataset.slot = String(index);
+        const img = document.createElement('img');
+        img.src = PET_SPRITES[d.id];
+        img.alt = localized(d.nameRu, d.nameEn);
+        img.draggable = false;
+        const mark = document.createElement('span');
+        mark.className = 'pet-level-mark';
+        mark.textContent = ['','I','II','III'][pet.level] + (pet.active ? '' : ' · ○');
+        card.title = img.alt + ' — ' + (pet.active ? localized('Активен','Active') : localized('Неактивен','Inactive'));
+        card.append(img, mark);
+        host.appendChild(card);
+    });
+}
+// Два слота доступны сразу при открытии питомцев (с уровня 4).
+function petSlots() { return currentLevel >= 4 ? 2 : 0; }
+function activePetsCount() { return Object.values(petsOwned).filter(p=>p.active).length; }
+function enforcePetSlots() {
+    let active=0;
+    petDefs.forEach(d=>{
+        const pet=petsOwned[d.id];
+        if (pet?.active) { active++; if (active>petSlots()) pet.active=false; }
+    });
+}
+function buyPet(id) {
+    if (gameLoading || crazyAdBusy) return;
+    if (currentLevel<4) return;
+    const d=petDefs.find(p=>p.id===id);
+    if (!d) return;
+    const pet=petsOwned[id];
+    if (pet && pet.level>=3) return;
+    const cost=pet ? Math.floor(d.cost * (pet.level===1 ? 1.5 : 3)) : d.cost;
+    if (resources+1e-7<cost) return;
+    resources-=cost;
+    if (pet) pet.level++;
+    else {
+        petsOwned[id]={level:1,active:activePetsCount()<petSlots()};
+        distinctPetsBought[id]=true;
+    }
+    checkAchievementUnlocks(); playBuySound(); updateUI(); saveGameState();
+}
+function togglePet(id) {
+    if (gameLoading || crazyAdBusy) return;
+    const pet=petsOwned[id];
+    if (!pet) return;
+    if (!pet.active && activePetsCount()>=petSlots()) {
+        messageToast(langData[currentLang].slotFull); return;
+    }
+    pet.active=!pet.active;
+    updateUI(); saveGameState();
+}
+function renderPets() {
+    const t=langData[currentLang];
+    updateFeatureSummary('list-pets','pet-summary',`${t.petHelp}\n${t.slots}: ${activePetsCount()}/${petSlots()}` + (currentLevel<4?' · '+t.requiresLevel+'4':''));
+    petDefs.forEach(d=>{
+        const pet=petsOwned[d.id], level=pet?.level||0;
+        const multiplier=level>0?1+(level-1)*.5:1;
+        const bonus=[d.click?`${t.clickBonus} +${Math.round(100*d.click*multiplier)}%`:'',d.passive?`${t.passiveBonus} +${Math.round(100*d.passive*multiplier)}%`:''].filter(Boolean).join(' · ');
+        const price=pet?Math.floor(d.cost * (pet.level===1?1.5:3)):d.cost;
+        const card=buildFeatureCard('list-pets','pet-'+d.id,()=>buyPet(d.id),()=>togglePet(d.id));
+        updateFeatureCard(card,{
+            icon:'pet:' + d.id,
+            title:`${localized(d.nameRu,d.nameEn)} · ${t.petLevel} ${level}/3`,
+            desc:bonus,
+            status:currentLevel<4?t.requiresLevel+'4':pet?(pet.active?t.active:t.inactive):'',
+            main:level===3?t.maxLevel:`${pet?t.improve:t.adopt} (${fmt(price)})`,
+            canMain:currentLevel>=4 && level<3 && resources+1e-7>=price,
+            extra:!pet?t.inactive:pet.active?t.deactivate:t.activate,
+            canExtra:!!pet && (pet.active || activePetsCount()<petSlots()),
+            completed:!!pet
+        });
+    });
+}
+function prestigeReward() {
+    if (cycleEarned>=3000000) return 3;
+    if (cycleEarned>=1500000) return 2;
+    if (cycleEarned>=640000) return 1;
+    return 0;
+}
+function canPrestige() {
+    return currentLevel>=11 && !!pickaxes.find(p=>p.id===7)?.purchased && prestigeReward()>0;
+}
+function prestigeUpgrade(id) {
+    if (gameLoading || crazyAdBusy) return;
+    if (!['click','passive'].includes(id)) return;
+    const level=prestigeUpgrades[id];
+    if (level>=4) return;
+    const cost=level+1;
+    if (crystals<cost) return;
+    crystals-=cost; prestigeUpgrades[id]++;
+    playBuySound(); updateUI(); saveGameState();
+}
+function openPrestigeModal() {
+    if (!canPrestige()) return;
+    const t=langData[currentLang];
+    document.getElementById('prestige-modal-title').textContent=t.prestigeTitle;
+    document.getElementById('prestige-modal-body').textContent=`${t.prestigeBody}\n${t.prestigeReward}: ${prestigeReward()}.`;
+    document.getElementById('prestige-cancel').textContent=t.cancel;
+    document.getElementById('prestige-confirm').textContent=t.confirm;
+    document.getElementById('prestige-modal').classList.add('show');
+    syncCrazyGameplay();
+}
+function closePrestigeModal() {
+    document.getElementById('prestige-modal').classList.remove('show');
+    syncCrazyGameplay();
+}
+function confirmPrestige() {
+    if (!canPrestige() || !document.getElementById('prestige-modal').classList.contains('show')) return;
+    const reward=prestigeReward();
+    crystals+=reward; prestigeCount++;
+    resources=0; totalExp=0; currentLevel=1; cycleEarned=0;
+    cyclePickaxesBought=0;
+    pickaxes.forEach(p=>p.purchased=(p.id===0));
+    passives.forEach(p=>p.count=0);
+    enchants={ efficiency:0,luck:0,automation:0 };
+    petsOwned={};
+    // Накопленные достижения, постоянные усиления и прогресс учёта остаются.
+    checkAchievementUnlocks();
+    updateBackground(); updateUI(); saveGameState();
+    reportCrazyProgress();
+    if (prestigeCount === 1 || prestigeCount % 5 === 0) crazyCallGame('happytime');
+    messageToast(`${langData[currentLang].prestigeToast} +${reward} ✦`);
+    // Между циклами — без лишнего gameplayStart на долю секунды.
+    requestCrazyAd('midgame');
+    closePrestigeModal();
+}
+function renderPrestige() {
+    const t=langData[currentLang];
+    updateFeatureSummary('list-prestige','prestige-summary',`${t.prestigeHelp}\n${t.crystals}: ${fmt(crystals)} · ${t.prestigeCount}: ${fmt(prestigeCount)}\n${t.currentCycle}: ${fmt(cycleEarned)} / 3 000 000`);
+    const prestigeCard=buildFeatureCard('list-prestige','prestige-reset',openPrestigeModal);
+    updateFeatureCard(prestigeCard,{
+        icon:getPrestigeCardIcon('reset'),
+        title:t.newRun+' · +'+prestigeReward()+' ✦',
+        desc:t.prestigeWarning,
+        status:canPrestige()?'':t.prestigeLocked,
+        main:t.newRun+' (+'+prestigeReward()+' ✦)', canMain:canPrestige()
+    });
+    [{id:'click',label:t.legacyClick},{id:'passive',label:t.legacyPassive}].forEach(d=>{
+        const level=prestigeUpgrades[d.id], cost=level+1;
+        const card=buildFeatureCard('list-prestige','prestige-upgrade-'+d.id,()=>prestigeUpgrade(d.id));
+        updateFeatureCard(card,{
+            icon:getPrestigeCardIcon(d.id),
+            title:d.label+' '+level+'/4',desc:`${t.savedBuff}: +${level*10}%`,
+            main:level>=4?t.maxLevel:`${t.improve} (${cost} ✦)`,
+            canMain:level<4 && crystals>=cost,completed:level>=4
+        });
+    });
+}
+function checkAchievementUnlocks() {
+    achievements.forEach(a=>{ if (!achievementUnlocked[a.id] && a.progress()>=a.goal) achievementUnlocked[a.id]=true; });
+}
+function claimAchievement(id) {
+    if (gameLoading || crazyAdBusy) return;
+    const a=achievements.find(a=>a.id===id);
+    if (!a) return;
+    checkAchievementUnlocks();
+    if (achievementClaims[id] || !achievementUnlocked[id]) return;
+    achievementClaims[id]=true;
+    resources+=a.reward; // награда НЕ увеличивает добычу, опыт, доход для престижа
+    playBuySound(); updateUI(); saveGameState();
+    messageToast(`${langData[currentLang].claimToast}: +${fmt(a.reward)}`);
+}
+function renderAchievements() {
+    const t=langData[currentLang];
+    const claimed=achievements.filter(a=>achievementClaims[a.id]).length;
+    updateFeatureSummary('list-achievements','achievements-summary',`${t.achievementHelp}\n${claimed}/${achievements.length} · ${t.totalMined}: ${fmt(allTimeEarned)}`);
+    achievements.forEach(a=>{
+        const claimed=!!achievementClaims[a.id];
+        const unlocked=!!achievementUnlocked[a.id];
+        const progress=Math.min(a.goal,a.progress());
+        const card=buildFeatureCard('list-achievements','achievement-'+a.id,()=>claimAchievement(a.id));
+        updateFeatureCard(card,{
+            icon:achievementIcons[a.id] || '🏆',
+            title:localized(a.titleRu,a.titleEn),
+            desc:`${localized(a.descRu,a.descEn)} · ${fmt(progress)}/${fmt(a.goal)}`,
+            status:unlocked?t.ready:t.inProgress,
+            main:claimed?t.done:unlocked?`${t.claim} (+${fmt(a.reward)})`:`+${fmt(a.reward)} ${t.currency}`,
+            canMain:unlocked && !claimed, completed:claimed
+        });
+    });
+}
+function renderFeatures() {
+    // Остальные вкладки обновляются при открытии / изменениях, не при каждом тике добычи.
+    if (selectedTab==='enchants') renderEnchants();
+    else if (selectedTab==='pets') renderPets();
+    else if (selectedTab==='prestige') renderPrestige();
+    else if (selectedTab==='achievements') renderAchievements();
+}
+
+/* =========================================================
+   ВКЛАДКИ
+========================================================= */
+function switchTab(tab) {
+    selectedTab = tab;
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.shop-list').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    document.getElementById(`list-${tab}`).classList.add('active');
+    scrollActiveTabIntoView();
+    renderFeatures();
+}
+
+/* =========================================================
+   ЧАСТИЦЫ
+========================================================= */
+function spawnParticles(e, text, isCrit = false) {
+    const area = document.getElementById('game-area');
+    const p = document.createElement('div');
+    p.className = `particle ${isCrit ? 'crit' : ''}`;
+    p.innerText = text;
+
+    const rect = document.getElementById('emerald').getBoundingClientRect();
+    const areaRect = area.getBoundingClientRect();
+
+    let x, y;
+    if (e && e.clientX) {
+        x = e.clientX - areaRect.left;
+        y = e.clientY - areaRect.top;
+    } else {
+        x = rect.left + rect.width / 2 - areaRect.left;
+        y = rect.top + rect.height / 2 - areaRect.top;
+    }
+
+    p.style.left = `${x}px`;
+    p.style.top  = `${y}px`;
+    p.style.setProperty('--x', `${(Math.random() - 0.5) * 120}px`);
+    p.style.setProperty('--y', `${-60 - Math.random() * 60}px`);
+
+    area.appendChild(p);
+    setTimeout(() => p.remove(), 600);
+}
+
+/* =========================================================
+   ПАССИВНЫЙ ДОХОД
+========================================================= */
+setInterval(() => {
+    if (gameLoading || crazyAdBusy) return;
+    const income = getPassiveIncome();
+    if (income <= 0) return;
+
+    const gain = (income / 10) * boostMultiplier;
+    recordMined(gain);
+    updateUI();
+}, 100);
+
+/* =========================================================
+   БУСТЕР
+========================================================= */
+function moveBooster() {
+    if (crazyAdBusy) return;
+    const b = document.getElementById('booster');
+    if (b.style.display === 'none' || b.style.display === '') return;
+    const area = document.getElementById('game-area');
+    const areaRect = area.getBoundingClientRect();
+    const maxX = Math.max(10, areaRect.width  - 90);
+    const maxY = Math.max(200, areaRect.height - 90);
+    const x = Math.max(10, Math.random() * maxX);
+    const y = Math.max(180, Math.random() * maxY);
+    b.style.left = `${x}px`;
+    b.style.top  = `${y}px`;
+}
+
+function spawnBooster() {
+    const b = document.getElementById('booster');
+    b.style.display = 'block';
+
+    moveBooster();
+
+    clearInterval(boosterMoveTimer);
+    boosterMoveTimer = setInterval(moveBooster, 3600);
+
+    setTimeout(() => {
+        b.style.display = 'none';
+        clearInterval(boosterMoveTimer);
+    }, 10000);
+
+    const nextSpawnTime = (Math.random() * (180 - 60) + 60) * 1000;
+    setTimeout(spawnBooster, nextSpawnTime);
+}
+setTimeout(spawnBooster, 30000);
+
+function activateBooster(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    if (gameLoading || crazyAdBusy) return;
+    document.getElementById('booster').style.display = 'none';
+    clearInterval(boosterMoveTimer);
+
+    boostMultiplier = 3;
+    boostFromAd = false;
+    playBoostSound();
+
+    let timeLeft = 15;
+    const status = document.getElementById('boost-status');
+    status.style.display = 'block';
+    status.innerText = `${langData[currentLang].boost} 00:${timeLeft < 10 ? '0' : ''}${timeLeft}`;
+
+    clearInterval(boosterTimer);
+    boosterTimer = setInterval(() => {
+        if (crazyAdBusy) return;
+        timeLeft--;
+        status.innerText = `${langData[currentLang].boost} 00:${timeLeft < 10 ? '0' : ''}${timeLeft}`;
+        if (timeLeft <= 0) {
+            clearInterval(boosterTimer);
+            boostMultiplier = 1;
+            status.style.display = 'none';
+            boostFromAd = false;
+        }
+    }, 1000);
+}
+
+/* =========================================================
+   CRAZYGAMES VIDEO ADS
+   - midgame: только после подтверждённого перерождения
+   - rewarded: добровольно в магазине «Добыча», раз в 5 минут
+   - начисляем награду ТОЛЬКО по adFinished, не по adError
+   - замораживаем пассивку и обратный отсчёт бустера во время рекламы
+========================================================= */
+function updateCrazyAdOverlay(visible) {
+    const overlay = document.getElementById('crazy-ad-blocker');
+    overlay.style.display = visible ? 'flex' : 'none';
+    if (visible) {
+        document.getElementById('crazy-ad-label').textContent = localized('Подготовка рекламы...', 'Preparing advertisement...');
+    }
+}
+function requestCrazyAd(type) {
+    if (!crazyReady || !crazyAdsAllowed || crazyAdBusy || crazyAdDisabled) return false;
+    if (type === 'rewarded' && Date.now() < crazyAdCooldownUntil) return false;
+    if (type === 'rewarded' && boostMultiplier > 1) return false;
+    crazyAdBusy = true;
+    crazyAdPlaying = false;
+    updateCrazyAdOverlay(true);
+    syncCrazyGameplay();
+    let complete = false;
+    // Защита от зависания при сбое запроса SDK (не прерывает играющую рекламу).
+    let requestTimeout = setTimeout(() => {
+        if (!crazyAdPlaying) finish(false, { code:'requestTimeout' });
+    }, 25000);
+    function finish(success, error = null) {
+        if (complete) return;
+        complete = true;
+        clearTimeout(requestTimeout);
+        if (crazyAdTimeout) { clearTimeout(crazyAdTimeout); crazyAdTimeout = null; }
+        if (crazyAdPlaying) resumeGameAudio();
+        crazyAdPlaying = false;
+        crazyAdBusy = false;
+        updateCrazyAdOverlay(false);
+        if (success && type === 'rewarded') {
+            crazyAdCooldownUntil = Date.now() + REWARDED_COOLDOWN_MS;
+            activateStoreBoost();
+            saveGameState();
+        }
+        if (error) {
+            console.info('CrazyGames video ad not shown:', error);
+            if (type === 'rewarded') {
+                if (['adsDisabledBasicLaunch','adblock'].includes(error?.code)) crazyAdDisabled = true;
+                else crazyAdCooldownUntil = Date.now() + 60000;
+                messageToast(localized('Реклама сейчас недоступна. Буст можно купить за изумруды.', 'Ad unavailable. You can buy the boost with emeralds.'));
+            }
+        }
+        refreshRewardOffer();
+        syncCrazyGameplay();
+    }
+    try {
+        crazySDK.ad.requestAd(type, {
+            adStarted: () => {
+                if (complete) return;
+                clearTimeout(requestTimeout);
+                crazyAdPlaying = true;
+                document.getElementById('crazy-ad-label').textContent = localized('Реклама...', 'Advertisement...');
+                pauseGameAudio();
+                crazyAdTimeout = setTimeout(() => finish(false, {code:'adTimeout'}), 120000);
+            },
+            adFinished: () => finish(true),
+            adError: (error) => finish(false, error)
+        });
+    } catch (error) { finish(false, error); }
+    return true;
+}
+function showRewardedAd() { requestCrazyAd('rewarded'); }
+function showInterstitialAd() { requestCrazyAd('midgame'); }
+function activateStoreBoost() {
+    if (crazyAdBusy) return;
+    boostMultiplier = 3;
+    playBoostSound();
+    let timeLeft = 30;
+    const status = document.getElementById('boost-status');
+    status.style.display = 'block';
+    const tick = () => {
+        status.textContent = `${localized('БУСТ X3!', 'BOOST X3!')} 00:${String(timeLeft).padStart(2, '0')}`;
+    };
+    tick();
+    clearInterval(boosterTimer);
+    boosterTimer = setInterval(() => {
+        if (crazyAdBusy) return;
+        timeLeft--;
+        tick();
+        if (timeLeft <= 0) {
+            clearInterval(boosterTimer);
+            boostMultiplier = 1;
+            status.style.display = 'none';
+            refreshRewardOffer();
+        }
+    }, 1000);
+    refreshRewardOffer();
+}
+function buyStoreBoost() {
+    if (gameLoading || crazyAdBusy || boostMultiplier !== 1 || resources + 1e-7 < STORE_BOOST_COST) return;
+    resources -= STORE_BOOST_COST;
+    activateStoreBoost();
+    updateUI();
+    saveGameState();
+}
+function refreshRewardOffer() {
+    const heading = document.getElementById('boost-offer-heading');
+    if (!heading) return;
+    const explanation = document.getElementById('boost-offer-explanation');
+    const adButton = document.getElementById('boost-ad-button');
+    const coinButton = document.getElementById('boost-coins-button');
+    const status = document.getElementById('boost-offer-status');
+    heading.textContent = localized('⚡ Буст ×3 на 30 секунд', '⚡ ×3 Boost for 30 seconds');
+    explanation.textContent = localized('Выбери добровольный просмотр видео или купи буст за изумруды.', 'Watch an optional video or purchase the boost with emeralds.');
+    const active = boostMultiplier > 1;
+    const canWatch = crazyReady && crazyAdsAllowed && !crazyAdDisabled && !active && Date.now() >= crazyAdCooldownUntil;
+    adButton.style.display = canWatch ? '' : 'none';
+    adButton.disabled = !canWatch || crazyAdBusy;
+    adButton.textContent = localized('🎬 Смотреть рекламу ×3', '🎬 Watch Ad ×3');
+    coinButton.textContent = localized(`💎 Купить (${fmt(STORE_BOOST_COST)})`, `💎 Buy (${fmt(STORE_BOOST_COST)})`);
+    coinButton.disabled = active || crazyAdBusy || resources + 1e-7 < STORE_BOOST_COST;
+    let note = '';
+    if (active) note = localized('Буст активен — дождись окончания.', 'Boost active — wait until it finishes.');
+    else if (crazyAdDisabled) note = localized('Реклама отключена платформой; покупка за изумруды доступна.', 'Ads are disabled by the platform; the emerald option remains available.');
+    else if (crazyReady && !canWatch && crazyAdCooldownUntil > Date.now()) {
+        const seconds = Math.ceil((crazyAdCooldownUntil - Date.now()) / 1000);
+        note = localized(`Следующая реклама через ${Math.ceil(seconds / 60)} мин.`, `Next ad in ${Math.ceil(seconds / 60)} min.`);
+    } else if (!crazyReady) note = localized('Демонстрационный режим: реклама недоступна.', 'Development mode: ads unavailable.');
+    status.textContent = note;
+}
+function pauseGameAudio() {
+    window._adMuted = true;
+    try { audioCtx.suspend(); } catch (e) {}
+}
+function resumeGameAudio() {
+    window._adMuted = false;
+    if (!window._crazyForcedMuted && soundEnabled && navigator.userActivation?.hasBeenActive !== false) {
+        try { audioCtx.resume(); } catch (e) {}
+    }
+}
+
+/* =========================================================
+   ЗВУК / ЯЗЫК
+========================================================= */
+function refreshGameSettingButtons() {
+    const ru = currentLang === 'ru';
+    const soundSymbol = soundEnabled ? '🔊' : '🔇';
+    const langSymbol = ru ? '🇷🇺' : '🇬🇧';
+    const muteDescription = soundEnabled ? (ru ? 'Выключить звук' : 'Mute sound') : (ru ? 'Включить звук' : 'Unmute sound');
+    const langDescription = ru ? 'Switch language to English' : 'Переключить язык на русский';
+    const mainSound = document.getElementById('sound-btn');
+    const mainLang = document.getElementById('lang-btn');
+    mainSound.textContent = soundSymbol;
+    mainLang.textContent = langSymbol;
+    mainSound.title = muteDescription;
+    mainSound.setAttribute('aria-label', muteDescription);
+    mainLang.title = langDescription;
+    mainLang.setAttribute('aria-label', langDescription);
+    document.getElementById('sound-mobile-btn').textContent = soundSymbol + ' ' + (ru ? 'Звук' : 'Sound');
+    document.getElementById('sound-mobile-btn').setAttribute('aria-label', muteDescription);
+    document.getElementById('lang-mobile-btn').textContent = langSymbol + ' ' + (ru ? 'Русский' : 'English');
+    document.getElementById('lang-mobile-btn').setAttribute('aria-label', langDescription);
+}
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    refreshGameSettingButtons();
+    if (!soundEnabled) { try { audioCtx.suspend(); } catch (e) {} }
+    else onAudioGesture();
+    saveGameState();
+}
+
+function applyLanguage() {
+    const t = langData[currentLang];
+    document.documentElement.lang = currentLang;
+    document.title = t.gameTitle;
+    document.getElementById('menu-title').innerText = t.menuTitle;
+    setTabLabel('pickaxes', t.tabPickaxes);
+    setTabLabel('passives', t.tabPassives);
+    setTabLabel('enchants', t.tabEnchants);
+    setTabLabel('pets', t.tabPets);
+    setTabLabel('prestige', t.tabPrestige);
+    setTabLabel('achievements', t.tabAchievements);
+    document.getElementById('platform-loading-label').textContent = currentLang === 'ru' ? 'Загрузка Emerald Miner...' : 'Loading Emerald Miner...';
+    document.getElementById('crazy-ad-label').textContent = currentLang === 'ru' ? 'Подготовка рекламы...' : 'Preparing ad...';
+    refreshGameSettingButtons();
+    updatePetCompanions(true);
+    refreshSaveWarning();
+}
+
+function toggleLang() {
+    currentLang = currentLang === 'ru' ? 'en' : 'ru';
+    applyLanguage();
+    updateUI();
+    saveGameState();
+}
+
+/* =========================================================
+   ОТКЛЮЧЕНИЕ КОНТЕКСТНОГО МЕНЮ
+========================================================= */
+document.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    return false;
+});
+
+let longPressTimer = null;
+document.addEventListener('touchstart', (e) => {
+    longPressTimer = setTimeout(() => { e.preventDefault(); }, 500);
+}, { passive: false });
+document.addEventListener('touchend', () => { clearTimeout(longPressTimer); });
+document.addEventListener('touchmove', () => { clearTimeout(longPressTimer); });
+
+/* =========================================================
+   CRAZYGAMES: SDK сам управляет потерей фокуса.
+   visibilitychange используется только для сохранения данных.
+========================================================= */
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saveGameState();
+});
+
+/* =========================================================
+   СТАРТ
+========================================================= */
+initMenuState();
+applyLanguage();
+initCrazyGamesSDK();
+</script>
+</body>
+</html>
